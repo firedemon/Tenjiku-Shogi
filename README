@@ -1,39 +1,11 @@
-Tenjiku Shogi, by E.Werner (edi@esperanto.nu, edi.werner@gmx.de)
+Tenjiku Shogi, by E.Werner (edi.werner@gmx.de)
+based on Tom Kerrigan's Simple Chess Program (TSCP).
+
 
 Very preliminary documentation for the ASCII Interface:
 
 'help' displays a list of commands (should be self-explanative). 
 You can force the computer to move by hitting return.
 
-
-Very preliminary documentation for the GUI:
-
-Mouse commands:
-Left mouse moves (click, not drag) around
-Left mouse click on destination square moves with promoting, if possible
-Right mouse click on destination square moves w.o. promoting
-
-Double moves are done: Left-click - Middle-click - Left/Right-click
-
-Left mouse-click on a square displays possible moves
-(green: normal move, red: capture, black: suicide)
-
-Right mouse-click on a square displays influences
-(green: normal move, red: capture only, other colors:
- piece can move there after other pieces have moved there)
-
-Note that not all promoted ranks are in red: on a board with
-hardware pieces this makes sense because you know immediately
-whether to put it face-up or face-down onto the board.
-I've used this feature only to distinguish between pieces that
-can or cannot promote: so a red ChS is a +VSd while a black ChS
-promotes to HT. A FiD or a VGn, however, do not promote so there's
-no point in having a red and a black one. A FO or a FBo only exist
-after promoting a VM or a SM, so you needn't distinguish here either.
-Therefore, these pieces are black.
-
-Not yet implemented:
-Time setup
-Search depth setup
-Handicaps
-Board setup
+Look into the INSTALL and TODO files for further information. And the
+ultimate documentation, of course, is the source itself ;-)

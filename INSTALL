@@ -1,0 +1,43 @@
+System
+------
+For the ASCII version, any system with a decent C Compiler should work.
+The program was developed under Linux, this is the only platform
+*known* to work. You'll also want a fast machine, of course.
+(The programming was mainly done on a slow 200 MHz Pentium 1 machine.)
+Kanji output is done with unicode, so you'll want an ANSI-capable terminal 
+with a unicode font. Otherwise, you'll have to do with the TSA-style 
+abbreviations. 
+
+
+Requirements
+-------------
+
+- a C Compiler, preferably GNU C
+- perl5.6 at least for building the opening book
+  (needed if you want to extend the supplied one, not really necessary yet)
+- libreadline and some curses library (ncurses works)
+
+If you want to export nice programs via TeX:
+- TeX, metafont, dvipng (the shogi-specific stuff comes with 
+  this package and lives in TeX/)
+
+Installation procedure
+----------------------
+
+Linux: 
+1. Unpack the tenjiku-X.XX.tgz (it unpacks into a directory)
+2. cd tenjiku-X.XX
+3. make (have a look at the Makefile first)
+(If you get errors like unknown reference to 'tgets' from libreadline, you'll 
+have to add -lncurses to the linker flags (your readline library doesn't have 
+the curses stuff).
+
+
+4. Start it and enjoy :-)
+
+Other:
+You're on your own, sorry. If you succeed getting it working,
+I'd be pleased to submit your informations.
+
+Patches/suggestions/chocolate to edi.werner@gmx.de,
+flames to /dev/null.

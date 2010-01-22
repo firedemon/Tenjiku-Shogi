@@ -1,0 +1,74 @@
+# Opening book for Tenjiku Shogi
+#
+#    E.Werner, Aug 2000
+#
+# The book.dat format is as follows:
+# - A line on one line (easy to remember, eh?)
+# - Good moves end on !, bad moves on ? (the choice depends solely on that)
+#   So WHEN LINES DEVIATE, ONE LINE MUST BE MARKED BEST.
+# - It's the same whether you put 'x' or '-' between two fields.
+# - Igui moves are shown as 9f!9e (also captures!)
+# - Comment lines start with '#' in col 0.
+#
+# This file will be converted with book.pl and then read into
+# a gdbm file with the create command from the program.
+#
+# some moves sec 19.1
+9l-9k 9e-9f? 8m-14g 8d-10f 14gx10c 9bx10c 9mx9a 10ax9a 10n-8k
+# Can tenjiku shogi be played w.o. restricting ...
+# chapter 1.2
+8l-8k 9e-9f? 9m-3g 8dx8p 7px8p 7c-8f 3g-14g 8f-4j? 3b-2o
+8l-8k 9e-9f? 9m-3g 8dx8p 7px8p 7c-8f 3g-14g 9d-11f 14gx10c 8fx14l 10cx9b 10ax9b 13n-16k
+8l-8k 9e-9f? 9m-3g 8d-14j? 10n-9k 7c-8f? 9kx3e
+# chapter 2.1
+8l-8k 8e-8f? 9m-3g 9d-6f 3gx7c 8dx7c 7mx7e+ 10cx8e 7n-9k
+8l-8k 8e-8f? 9m-3g 9d-6f 3gx7c 8dx7c 7mx7e+ 10cx7e 7n-9k
+8l-8k 8e-8f? 9m-3g 9d-6f 3gx7c 8dx7c 7mx7e+ 10cx7f! 7n-9k
+8l-8k 8e-8f? 9m-3g 9d-6f 3gx7c 8dx7c 7mx7e+ 6fx7e 7n-9k
+8l-8k 8e-8f? 9m-3g 9d-6f 3gx7c 8dx7c 7mx7e+ 6dx7e 7n-9k
+8l-8k 8e-8f? 9m-3g 9d-6f 3gx7c 8dx7c 7mx7e+ 7dx7e 7n-9k
+8l-8k 8e-8f? 9m-3g 9d-6f 3gx7c 8dx7c 7mx7e+ 8cx7e 7n-9k
+8l-8k 8e-8f? 9m-3g 9d-6f 3gx7c 8dx7c 7mx7e+ 9cx7e 7n-9k
+# chapter 2.2
+8l-8k 5d-3f? 9m-7k 7e-7f 8m-10k
+# chapter 3.2 will be in the further discussion down
+# chapter 3.3
+8l-8k 7e-7f 9mx9a? 10ax9a 10n-9k 7d-7e?
+8l-8k 7e-7f 9mx9a? 10ax9a 10n-9k 8d-7e
+# chapter 3.4 
+8l-8k 7e-7f 9m-3g? 8d-7e 10n-9k 3c-2b 9k-13g 14c-15b 3gx7c 7ex7n? 7cx10c
+8l-8k 7e-7f 9m-3g? 8d-7e 10n-9k 3c-2b 9k-13g 14c-15b 3gx7c 9dx7c
+8l-8k 7e-7f 9m-3g? 8d-7e 3gx7c 7ex7n? 7cx10c 7nx10n 10cx9b 10ax9b 11mx10n
+# chapter 4.2
+8l-8k 7e-7f 9m-7k? 8m-10k 9e-9f? 10k-14g
+# 4.2.1
+8l-8k 7e-7f 9m-7k? 8m-10k 11b-12b 7n-9k 9e-9f 9kx3e 7ex3e 7kx7c 9dx7c 5m-3k 3e-1g
+# 4.2.2
+8l-8k 7e-7f 9m-7k? 8m-10k 11b-12b 7n-9k 9e-9f 10k-14g! 10c-11b 9k-13g 14c-15b? 14g-16g
+8l-8k 7e-7f 9m-7k? 8m-10k 11b-12b 7n-9k 9e-9f 10k-14g! 10c-11b 9k-13g 9d-10f? 13gx14e 7ex14e 7kx7c 6dx7c 14gx14e
+8l-8k 7e-7f 9m-7k? 8m-10k 11b-12b 7n-9k 9e-9f 10k-14g! 10c-11b 9k-13g 7c-8f 14g-16g 8fx14l 16gx11b 11ax11b 13g-15i
+8l-8k 7e-7f 9m-7k? 8m-10k 11b-12b 7n-9k 9e-9f 10k-14g! 10c-11b 9k-13g 7c-8f 14g-16g 11b-10c? 16g-16i
+# the critical line against colin colin's book, add 2, sec 4.3.2
+8l-8k 7e-7f 8m-10k 8d-5g 10k-13i 7c-8f 13i-16i 8f-14l 16i-14l 6d-14l+ 9m-5i 9d-6f 9l-9k
+# colin's book, add 2, sec 2.1
+8l-8k 7e-7f 8m-10k 8d-5g 10k-13i 7c-8f 14n-15o? 8f-4j 3n-2o? 9d-8f!
+8l-8k 7e-7f 8m-10k 8d-5g 10k-13i 7c-8f 14n-15o? 8f-4j 13i-16f 4jx3l 4n-1k 3l-1j 9m-6j 1jx5n 7nx5n 5gx5n 8nx5n 9d-6f
+# colin's book, add 2, sec 3.
+8l-8k 7e-7f 8m-10k 8d-5g 10k-13i 7c-8f 13i-16i 5g-14g? 7n-9k
+8l-8k 7e-7f 8m-10k 8d-5g 10k-13i 7c-8f 13i-16i 5g-10g? 9mx9a 10ax9a 10n-9k 8fx14l 16ix14l 6dx14l+ 9kx3e
+8l-8k 7e-7f 8m-10k 8d-5g 10k-13i 7c-8f 13i-16i 5g-7i? 9mx9a 10x9a 10n-6j
+8l-8k 7e-7f 8m-10k 8d-5g 10k-13i 7c-8f 13i-16i 8f-14l 16i-14l 6d-14l+ 9m-5i 9d-6f 9l-9k
+# the weak openings
+10l-10k? 7e-7f 9m-10l 8d-7e
+#
+13m-13k? 9e-9f 12m-10k 6dx13k 13lx13k 8d-14j 11o-12o 9d-9g 10n-11o 14j-7j
+#
+12m-10k? 9e-9f 14l-14k 9d-7f
+#
+5m-7k? 9e-9f
+#
+5m-3k? 9e-9f 10l-10k 8d-14j 9m-10l 14jx10n 11mx10n 7c-8f
+#
+4m-4k? 9e-9f 10l-10k 8d-14j 9m-10l 14jx10n 11mx10n 7c-8f
+#
+9mx9d?

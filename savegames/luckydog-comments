@@ -1,0 +1,60 @@
+Demon Pawn
+
+1: P 7l-7k   2: SE 5d-3f    3: BG 6m-8k    4: P 4e-4f    5: Fi 7n-6k 
+The quick attack. The Fire Demon has three targets.
+a: 9j then 14e or 9e  b: 6h then 9e or 8e  c: 2g winning the SE  
+6: P 10e-10f
+Whites turn to play some forcing moves and try to cover the black threats. Variation Ln-7n
+1: Ln 9o-7n   2: VG 9d-15j   3: K 9p-9o   4: VG 15j-14j   5: BG 11mx14j 
+6: GG 8dx14j   7: K 9o-9p   8: GG 14jx10n9: LH    9nx10n-11m   10: Ky 7b-5b
+11: BG 8kx3f   12: WB 6cx3f   13: Fi 6k-2gx!1  14: LH 8c-6c   15: Fi 2gx3ex!5
+16: DH 4c-1f  
+7: SE 12m-14k    8: BG 11d-9f 
+The same attack as black, covers a black frontal attack from 9j.
+9: P 13l-13k    10: RG 7dx7m+
+This opens a valuable square in defence and give 1 less piece to a Fire Demon attack
+11: FE 8nx7m
+Taking with the lion gives a flight square for the king but has less attacking value. Here the Free Eagle covers 7j and in some lines the Great General may want to check from 8n.              
+12: P 8e-8f
+Now the Fire Demon can come to 7f to defend against black Fi-6h if needed.
+The VG covers 6c.       
+13: BG 8kx3f  One possible line.
+(Not 13: Fi-2gx! WBx2g VGx2g VG-6c).      
+14: WB 6cx3f     15: Fi 6k-2gx!1     16: B 3c-2b  
+Black has a WB and SE for a BG.
+Note if the Fire Demon takes the Kylin then the black Fire Demon burns first and the King survives!
+VG-6c may be better than B-2b. 
+
+I don't know: 1. The FiD is taboo. 2. FiD-5d gives Black an awful lot of material for the FiD 3. White's counterattack is weakened since control over 15j is lessened.
+
+16.VGn-6c 17.P-9k mating threat again 18.SEg-14f 19.FiD-5d 20.GGnx5d 21.VGn-2g 22.Ky-5b 23.GGn-8n 24.K-7b 25.FiD-8k (threatening x14e) unclear to me, maybe 26.RGnx10m+ and 28.Dg-12g (but not 26. FiD-11f? 27.FiDx14e!)
+
+16.B-2b 17.VGn-3h threatening mate on 1h (17.P-9k threatens mate on
+14g and gains a tempo. But after 18.SEg-14f can 19.VGn-3h be defended
+with the SEg and Black might have to worry about mating threats
+himself.) 
+18.Ln-6c 19.GGn-8n (with the ideas RGn-8m and
+FiD-5g) 20.GGnx8n 21.FKx8n Opening a square for the K. 
+22.RGnx10m* (Burning moves are loss of tempo, but it looks acceptable. An alternative is VGn-11g and it looks like White can get away with his material advantage.)
+
+
+
+
+-----------------------
+
+1: P 7l-7k   2: SE 5d-3f   3: P 9l-9k   4: P 10e-10f   5: SE 12m-14k
+6: P 8e-8f  White must not play BG-9f here e.g. 
+[How about 6.SEg-14f ?? ]
+1: BG 11d-9f  2: VG 8m-14g  3: VG 9d-11d  4: VG 14g-13i
+5: VG 11d-11g  6: VG 13i-15h  7: VG 11g-11d  8: Fi 7n-14g
+9: VG 11dx15h*  10: Fi 14gx14ex!5
+7: HF 4m-4k  
+Now White must play 8.BG-9f or 8.P-4f or something similar but not the original move given here, 8.HF 13d-13f ??? 
+
+9.GGn-9l threatening GGnxSEg and BGnxHF 10.SEg-3g 11.SEg-3k or 10.P-4f 11.BGnx13f 12.BGnx13f 13.GGn-14g 14.BGnx14g 15.VGnx14g 16.VGn-11d 17.HFx11d* mate. Funnily enough, if the HF hadn't burned, White would be alright after GGnx11d!
+
+But 8.BG-9f gives material away, P-4f at least gains a tempo
+
+
+8.GGn-8e 9.P-13k 10.BGnx4k 11.BGnx4k 12.FiD-9f (12.FiD-11f? 13.FiD-8k!) 13. FiD-8k (13.BGnx9k? 14.GGn-3j) 14.RGnx7m+ 15.Lnx7m (16.FiD-13j? 17.FiD-4g threatening mate. 18.P-4f* 19.FiDx7e with 21.VGn-2g and GGn-8m mate; 16.FiD-7g 17.FiDx14e 18.FiD-4j! (not 18.GGnx14e? 19.VGn-2g and 21.GGn-8m mate)
+

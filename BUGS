@@ -1,0 +1,17 @@
+Right now, I know of the following bugs
+---------------------------------------
+
+- computer does not find book line after loading a file and taking moves back
+- toggling the board coords does not work
+- strange move L16a-16a when no King left
+- RGn jumps over VGn
+- need a move-penalty together with move_adj
+
+- (need load-pos save-pos no-rules stuff for checking)
+- redo option does not (yet) work
+
+Graphic bugs:
+- SEg to high (could be fixed easily)
+- FL to large
+
+Please report bugs to edi@esperanto.nu or edi.werner@gmx.de

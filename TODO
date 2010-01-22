@@ -1,0 +1,240 @@
+--------------------- CHANGELOG ----------------------
+Latest changes:
+2010.01.22
+- "setup" will allow to change a position (permeates to savegames)
+- positions can be loaded and saved with "lpos" and "spos"
+  the files are in positions/ and can be loaded from savegames
+
+2010.01.21
+- added "exports" and "savegames" directories so main directory won't be cluttered
+- "m(oves)" now shows moves for both side, not only the one whose move it is
+- extended "inf", but still very buggy
+
+2010.01.20
+- give file to load as startup argument
+- show moves to squares with opponent inf as purple, hypothetical moves in blue, suicide moves in red, mark original square black
+
+2010.01.19
+fixed the following in TeX export
+- osho vs. gyokusho
+- upside down pieces
+- left and right hand side swapped (was actually up and down swapped)
+- spurious line at bottom of page (was page number)
+- png conversion with dvipng -D 200 looks nice, has to be autocropped (how?)
+ 
+
+2010.01.19
+- added arrows in "fullkanji" mode for easier identification of pieces
+- first hack at TeX export, to fix:
+  osho vs. gyokusho (done)
+  upside down pieces (done)
+  TODO: check promotions (uncomplete!!!!)
+  left and right hand side swapped for some reason (done)
+  spurious line at bottom of page prevents autocropping (done)
+  TODO: display last move with \definecolor{name}{gray}{.8} or
+  \definecolor{name}{rgb}{0, 0, .7} and \colorbox{name}{text}
+  add dot in four positions (done)
+  add directory for screens
+  TODO: provide TeX stuff in dist
+  add graphic formats to go on converting to (dvipng, dvigif, partly done)
+
+2010.01.18
+-fixed display of last move in full kanji mode
+2010.01.17
+- added: options "fullkanji", "kanji" and "ascii" for kanji or ascii display
+
+2010.01.16
+-added: options file to read in at startup (breaks for newline at end of file)
+-fixed bug: redo stack wasn't cleared after undo and entering new move
+-fixed identifymove: move shortcuts like 6cx or 9d+ are now identified correctly to consider only captures or promotional moves
+-fixed havoc resulting in pieces switching color and weird moves being executed with shortcuts
+-several small fixes to get rid of the warnings for tenjiku-ansi
+-several small bugs newly introduced
+
+
+2010.01.15
+-show last move and move no in "xxx to move" and on the board
+-shortcut 'u' for undo added
+-fixed 'verytame' FiD
+-added piece names to savegame (old-style savegames with "loadold")
+-readline support
+-added redo
+-added go to position after move
+
+---------------------- TODO -------------------------
+
+to fix:
+- spurious "Illegal move" on eof
+- identifymove doesn't always find the correct move (sometimes leads to pieces changing their color) seems like move still gets onto redo stack, but not on undo
+- clear up show_moves (done) and show_influence
+- burning doesn't show up in influences - should be several grades
+  a) direct move b) move after a pieces type a) has moved c) burning (buggy)
+- redo shows wrong piece
+
+to add:
+- put savegames into their own folder with extension
+- add readline completion for load
+- give last move with fully correct attributes (captures, promotion, burns)
+- add better documentation (good one!)
+- network option
+- mating solver
+- setup positions
+- show checks
+
+consider:
+-graphical GUI
+-filename completion in load and loadold
+-showing and saving trees
+-add comments
+-show igui among possible moves
+- burn_all_FiD not implemented
+
+
+earlier done:
+
+-make shortcut commands and moves like ZoG (partly ok, giving only one square works, sometimes BUGGY FOR CAPTURING)
+
+
+minor bugs: influence can't see whether a piece is defended by a jgn and attacked by a jgn
+influence need information about attacker and defender values
+at least least valuable defender
+
+add random select when equally rated moves
+
+-----------------------------------------------------------
+
+2. Other Ln moves (done)
+   Reduce several igui w.o. captures to one (done)
+   Ln next to enemy pieces segfaults (fixed)
+	
+
+3. Jumping Generals (done)
+
+fix load_game() (done)
+area moves!!!, double cat-sword (FEg)
+write check one area to prevent 3 nested for-loops
+(LHk) (done)
+
+ VGn (done )
+
+4. if Fire Demon moves next to FiD, both disappear (done)
+      takeback doesn't restore burnt pieces, but changes
+	FiD to opponent's FiD (fixed)
+
+other pieces, promotion (done)
+
+5. Heavenly Tetrarchs (done)
+
+get_steps need get_steps_caps() generating only captures (done)
+
+add piece values  (done)
+
+load_file must understand commands (done)
+
+bug somewhere: changing color of piece (new takeback debug, done?)
+
+bug in Ln move: can leave colored empty square (done?)
+
+attack and in_check need additional code for FiD and CP (done?)
+
+find bug in move generating/retracting (not an overflow!!!)
+maybe initialize *everything* we're writing to (done)
+
+add opening book (done)
+
+force move possibility (done)
+-------------------------------------------------------------
+
+
+# add tex stuff to dist (done)
+latex tenjikupieces
+dvips tenjikupieces
+ gs  -dNOPAUSE -sDEVICE=pnm -sOutputFile="|pnmcrop|pnmtotiff > /usr/tmp/tenj%d.tiff" tenjikupieces.ps quit.ps
+
+GRAPHICAL INTERFACE
+
+draw the board (done)
+
+draw_move gets 8k-11k instead of 9l-9k and 9m-9k instead
+of 8l-8k (done)
+draw_move: drag or click here and there (done)
+	make move and animate (done)
+
+undraw_move (done)
+graphics (done) for pieces
+save and load dialog (done)
+
+help for pieces and coordinates (done)
+force button (done)
+---------
+
+label Computer is thinking/Your move (done)
+display pv (done)
+displaying influences during computer thinking kills search (fixed)
+move script (done)
+book doesn't work for moves from a file (fixed)
+implement Ln move, igui doesn't work (fixed)
+fix Graphics VSd -> ChS(black) (fixed)
+
+very urgent
+----------
+fix main-nox11.c (new in_book function)
+
+fix clicking chaos (display time, search depth, which move, cancel move)
+fix square sizes for moves/influences
+
+fix panel layout (grid manager in examples/entry.c)
+
+fix Makefile (TeX, X, install target)
+
+better computer player
+
+medium urgent
+-------------
+
+rule variants 
+board coordinates (doesn't work :-(
+smart moves for ascii version
+
+less urgent
+----------------------
+
+sound when capturing/making a move
+flip view
+autoplay button
+help dialogs
+handicaps
+setup
+
+
+-------------------------------------------------------------
+search:
+
+optimise search (4 mio nodes before hang-up in 4-ply!!!!)
+quiesce search 
+
+add fractional search depth depending on 
+piece value of moving piece / value of all pieces
+
+if pv with +/- 999998 is found, just follow it
+
+there's a bug s.wh. :-)!!!!!!!!!!!
+
+replay option (ask for file, ask for delay between moves)
+
+add square weights for eval()
+
+better opening book (for other variants as well)
+with default moves (if not this move reply that)
+
+add init file ~/.tenjiku to read setup
+
+
+
+---------------
+
+variants
+FiD (TSA), FiD (GH)
+LHk (TSA), LHk (CPA)
+FEg (TSA), FEg (EW)
+JGs (TSA), JGns (EW)

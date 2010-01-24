@@ -2149,7 +2149,7 @@ void gen_checks()
 		      } else { /* color == side + EMPTY */
 			if ( can_promote(i,n) ) {
 			  gen_push(i, n, 16);
-			  if ( ! must_promote(i,n) ) gen_push_if_check(i, n, 0);
+			  if ( ! must_promote(i,n) ) gen_push(i, n, 0);
 			} else {
 			  if ( burning(i,n) )
 			    gen_push(i,n,65);

@@ -530,8 +530,8 @@ int main(int argc,  char **argv)
 			printf("tsa - starts a new game with TSA JGns (default)\n");
 			printf("hodges - starts a new game, FiD suicide burns enemy pieces (G.Hodges)\n");
 			printf("burn - starts a new game, FiD burns also friendly pieces (E.Werner)\n");
-			printf("tame - starts a new game, FiD only burns when it doesn't capture (E.Werner)\n");
-			printf("verytame - starts a new game, FiD only burns, but doesn't capture (E.Werner)\n");
+			printf("tame - (notame) starts a new game, FiD only burns when it doesn't capture (E.Werner)\n");
+			printf("verytame - (notame) starts a new game, FiD only burns, but doesn't capture (E.Werner)\n");
 			printf("fid - starts a new game, only FiD suicide only burns own FiD (TSA rule, default)\n");
 			printf("------------ I/O ----------------\n");
 			printf("create - create a new opening file - please read the comments in book.dat!\n");
@@ -542,6 +542,8 @@ int main(int argc,  char **argv)
 			printf("l(oad) - load a game file\n");
 			/* printf("replay - load a game file and replay game\n"); */
 			printf("s(ave) - save the current game to a file\n");
+			printf("lpos - load game position files\n");
+			printf("spos - save position to game position files\n");
 			printf("tex or TeX - export position to LaTeX file\n");
 			printf("bye/quit  - exit the program\n");
 			fflush(stdout);
@@ -757,6 +759,12 @@ void print_board( FILE *fd ) {
   } else {
     ascii_print_board( fd );
   }
+  if ( lost( side )) {
+    fprintf( stdout, "You have lost the game!\n");
+  } else if ( in_check( side )) {
+    fprintf( stdout, "You're in CHECK!\n");
+  }
+
 }
 
 
@@ -1934,7 +1942,11 @@ void show_checks( void ) {
   /* find the moves which would put the opponent into check */
   /* not very useful as such, but a good step into the direction
      of a mate problem solver */
-  ;
+  int i;
+  gen_checks();
+  for (i = 0; i <= ply; i++ ) {
+   fprintf( stderr,"# %s ", move_str( hist_dat[i].m.b ));
+  }
 }
 
 void show_influence( void ) {

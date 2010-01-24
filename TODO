@@ -1,6 +1,10 @@
 --------------------- CHANGELOG ----------------------
 Latest changes:
 2010.01.22
+- debugged attack() and in_check()
+- displaying checks now
+
+2010.01.22
 - "setup" will allow to change a position (permeates to savegames)
 - positions can be loaded and saved with "lpos" and "spos"
   the files are in positions/ and can be loaded from savegames
@@ -72,14 +76,14 @@ to fix:
 - redo shows wrong piece
 
 to add:
-- put savegames into their own folder with extension
+- put savegames into their own folder with extension (partly done)
 - add readline completion for load
 - give last move with fully correct attributes (captures, promotion, burns)
 - add better documentation (good one!)
 - network option
 - mating solver
-- setup positions
-- show checks
+- setup positions (done)
+- show checks (done)
 
 consider:
 -graphical GUI

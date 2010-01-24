@@ -1,5 +1,7 @@
 Tenjiku Shogi, by E.Werner (edi.werner@gmx.de)
 based on Tom Kerrigan's Simple Chess Program (TSCP).
+Right now, this is mainly a tool for analysing, it does not sport a 
+reasonable computer opponent. 
 
 
 Very preliminary documentation for the ASCII Interface:
@@ -9,3 +11,21 @@ You can force the computer to move by hitting return.
 
 Look into the INSTALL and TODO files for further information. And the
 ultimate documentation, of course, is the source itself ;-)
+
+It has only been tested under linux and you will need:
+
+- a decent C compiler
+- an ANSI terminal (preferably unicode-capable)
+- readline and ncurses
+- TeX and friends if you want to export nice graphics.
+
+And what you get is:
+- a Tenjiku board (ASCII, kanji, full kanji)
+- lots of rule variants (virtually everything which has been discussed except
+for the FEg issue)
+- possible moves and influences
+- loading and saving games and positions
+- an absolutely rotten computer opponent (but at least a very slow one)
+- exporting of graphics via TeX
+
+And the best thing: No tedious documentation to dig through and all this comes to you in mint condition - basically untested and with lots of original bugs!

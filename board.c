@@ -107,7 +107,7 @@ BOOL burning(int where, int sq ) {
 
   int i,n;
   if ( piece[where] != FIRE_DEMON ) return FALSE;
-  if ( jgs_tsa && suicide(sq)) return FALSE;
+  if ( !hodges_FiD && suicide(sq)) return FALSE;
   if (verytame_FiD && ( color[where] != EMPTY )) return FALSE;
   if (tame_FiD && ( color[where] != EMPTY )) return FALSE;
   for (i = 0; i < 8; i++) {
@@ -1978,8 +1978,6 @@ void print_line( move_bytes m ) {
 }
 
 
-/*    NOT USED (YET) */
-
 /* in_check() returns TRUE if side s is in check and FALSE
    otherwise. It just scans the board to find side s's king
    and calls attack() to see if it's being attacked. */
@@ -2019,7 +2017,7 @@ BOOL in_check(int s)
 
 
 /* attack() returns TRUE if square sq is being attacked by side
-   s and FALSE otherwise.  IT'S BUGGY!!!! */
+   s and FALSE otherwise. */
 
 BOOL attack(int sq, int s)
 {
@@ -2029,6 +2027,16 @@ BOOL attack(int sq, int s)
   int var_board[NUMSQUARES];
   int save_piece[NUMSQUARES];
   int save_color[NUMSQUARES];
+
+  int orig_side = side;
+  BOOL sides_swapped = FALSE;
+
+  if ( s != orig_side ) {
+    side ^= 1;
+    xside ^= 1;
+    sides_swapped = TRUE;
+    gen();
+  }
 
   /* init var_board */
   for ( i = 0; i < NUMSQUARES; i++)
@@ -2040,29 +2048,121 @@ BOOL attack(int sq, int s)
     save_color[i] = color[i];
   }
 
-  for (i = gen_begin[ply]; i < gen_end[ply]; ++i) {
-    if (!makemove(gen_dat[i].m.b)) {
-      continue;
-    }
-    else {
-      gen_caps();
-      for (n = gen_begin[ply]; n < gen_end[ply]; ++n) {
-	if ( gen_dat[n].m.b.to == sq ) {
-	  gen();
+  for (n = gen_begin[ply]; n < gen_end[ply]; ++n) {
+    if ( gen_dat[n].m.b.to == sq ) {
+      /* restore old board */
+      for ( j = 0; j < NUMSQUARES; j++) {
+	piece[j] = save_piece[j];
+	color[j] = save_color[j];
+      }
+      if ( sides_swapped ) {
+	side ^= 1;
+	xside ^= 1;
+	sides_swapped = FALSE;      
+	gen();
+      }
+      return( TRUE );
+      /* or if it's a fire demon not commiting suicide and the opponent's
+	 K or CP next to it */
+    } else if (( piece[gen_dat[n].m.b.from] == FIRE_DEMON) &&
+		 (!suicide(gen_dat[n].m.b.to)||hodges_FiD)) {
+	/* check if there's an opponent's K or CP */
+      /*
+      fprintf(stderr, "FiD move: %d-%d",gen_dat[n].m.b.from,gen_dat[n].m.b.to);
+      */
+      for (i = 0; i < 8; i++) {
+	j = mailbox[mailbox256[gen_dat[n].m.b.to] + lion_single_steps[i]];
+	if (j == sq ) {
+	  /* restore old board */
+	  /* fprintf(stderr, "found square: %d\n", j); */
+	  for ( j = 0; j < NUMSQUARES; j++) {
+	    piece[j] = save_piece[j];
+	    color[j] = save_color[j];
+	  }
+	  if ( sides_swapped ) {
+	    side ^= 1;
+	    xside ^= 1;
+	    sides_swapped = FALSE;      
+	    gen();
+	  }
 	  return TRUE;
-	}
-	/* restore old board */
-	for ( j = 0; j < NUMSQUARES; j++) {
-	  piece[j] = save_piece[j];
-	  color[j] = save_color[j];
 	}
       }
     }
   }
-  gen();
+
+      
+  for ( j = 0; j < NUMSQUARES; j++) {
+    piece[j] = save_piece[j];
+    color[j] = save_color[j];
+  }
+
+  if ( sides_swapped ) {
+    side ^= 1;
+    xside ^= 1;
+    sides_swapped = FALSE;
+    gen();
+  }
+
   return FALSE;
 }
 
 
 
+/* gen_checks() generates pseudo-legal moves for the current position.
+   It scans the board to find friendly pieces and then determines
+   what squares they attack. When it finds a piece/square
+   combination, it calls gen_push to put the move on the "move
+   stack, provided it's a check." NOT WORKING */
 
+void gen_checks()
+{
+	int i, j, n;
+	int steps; /* steps into single direction */
+	/* so far, we have no moves for the current ply */
+	gen_end[ply] = gen_begin[ply];
+	
+	if ( lost(side)) return;
+
+	for (i = 0; i < NUMSQUARES; ++i)
+		if (color[i] == side) {
+		  if ( move_types[piece[i]][8] != none ) /* special move piece */
+		    special_moves( i, color[i] );
+		  for (j = 0; j < offsets[piece[i]]; ++j) {
+		    steps = get_steps(i,j, color[i]);
+		    for (n = i;;) { /* stepping into a single direction */
+		      if ( steps <= 0 )
+			break;
+		      n = mailbox[mailbox256[n] + offset[side][piece[i]][j]];
+		      if (n == -1)
+			break;
+		      if (color[n] != EMPTY) {
+			if (color[n] == xside) {
+			  if ( can_promote(i,n) ) {
+			    gen_push(i, n, 17);
+			    if ( ! must_promote(i,n) )
+			      gen_push(i, n, 1);
+			  } else 
+			    gen_push(i,n,1);
+			}
+			break;
+		      } else { /* color == side + EMPTY */
+			if ( can_promote(i,n) ) {
+			  gen_push(i, n, 16);
+			  if ( ! must_promote(i,n) ) gen_push_if_check(i, n, 0);
+			} else {
+			  if ( burning(i,n) )
+			    gen_push(i,n,65);
+			  else 
+			    gen_push(i, n, 0);
+			}
+		      }
+		      steps--;
+		    }
+		  }
+		}
+
+	/* the next ply's moves need to start where the current
+	   ply's end */
+	gen_begin[ply + 1] = gen_end[ply];
+}

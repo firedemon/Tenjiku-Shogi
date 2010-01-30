@@ -8,7 +8,8 @@
  */
 
 unsigned char tenjiku_version[] = { "0.55" };
-
+/* #define DEBUG
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -579,6 +580,10 @@ int main(int argc,  char **argv)
 		      continue;
 		    if (gen_dat[i].m.b.from == from && gen_dat[i].m.b.to == to  && gen_dat[i].m.b.over == over) {
 		      found = TRUE;
+#ifdef DEBUG
+		      fprintf(stderr,"move found: %d %d %d: ", from, over, to);
+		      fprintf(stderr,"%d%cx%d%c-%d%c\n", from_file, from_rank, over_file, over_rank, to_file, to_rank);
+#endif
 		      break;
 		    }
 		  } 
@@ -610,8 +615,7 @@ int main(int argc,  char **argv)
 			break;
 		      }
 		    } /* for */
-		  } /* if 5== sscanf */
-		  else {
+		  } else { /* if 5== sscanf */
 		    promote = FALSE;
 		    if (( 3 == sscanf(s, "%d%c%c", &from_file, &from_rank, &prom ))||
 			( 2 == sscanf(s, "%d%c", &from_file, &from_rank, 0 ))){
@@ -625,22 +629,23 @@ int main(int argc,  char **argv)
 		      if (i > 0 ) { found = TRUE; }
 		    }
 		  } /* else */
-		  if (!found || !makemove(gen_dat[i].m.b)) {
-		    printf("Illegal move.\n");
-		    fflush(stdout);
-		  } else {
-		    /* save the "backup" data because it will be overwritten */
-		    strcpy(before_last_move,s);
-		    undo_dat[undos] = hist_dat[0];
-		    ++undos;
-		    redos=0;  /* new line, so clear old redo stack */
-		    print_board(stdout);
-		    ply = 0;
-		    gen();
-		  }
+		}
+		if (!found || !makemove(gen_dat[i].m.b)) {
+		  printf("Illegal move.\n");
+		  fflush(stdout);
+		} else {
+		  /* save the "backup" data because it will be overwritten */
+		  strcpy(before_last_move,s);
+		  undo_dat[undos] = hist_dat[0];
+		  ++undos;
+		  redos=0;  /* new line, so clear old redo stack */
+		  print_board(stdout);
+		  ply = 0;
+		  gen();
 		}
 	}
 }
+
 
 
 /* move_str returns a string with move m in coordinate notation */
@@ -1642,7 +1647,9 @@ void show_moves( void ) {
   /* normal moves first */
   for (i = 0; i < gen_end[ply]; ++i) {
     if ( gen_dat[i].m.b.from == from ) {
-      /* printf("%s, ", move_str(gen_dat[i].m.b)); */
+#ifdef DEBUG
+      printf("%s, ", move_str(gen_dat[i].m.b));
+#endif
       if ( suicide(gen_dat[i].m.b.to) ) {
 	var_board[gen_dat[i].m.b.to] = SUICIDE; /* suicide move */
       } else {
@@ -1667,7 +1674,9 @@ void show_moves( void ) {
   /* hypothetical moves now (on empty board) */
     for (i = 0; i < gen_end[ply]; ++i) {
       if ( gen_dat[i].m.b.from == from ) {
-	/* printf("%s, ", move_str(gen_dat[i].m.b)); */
+#ifdef DEBUG
+	printf("hyp: %s, ", move_str(gen_dat[i].m.b));
+#endif
 	if ( var_board[gen_dat[i].m.b.to] == NO_MOVE )
 	  var_board[gen_dat[i].m.b.to] = HYPOTHETICAL; /* hypothetical move */
       }

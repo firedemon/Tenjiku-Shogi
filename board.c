@@ -7,8 +7,9 @@
  *	Copyright 1997 Tom Kerrigan
  *      
  */
-
-
+/*
+#define DEBUG
+*/
 #define VALUABLE_CAPTURES
 #define CAPTURE_THRESHOLD  300
 
@@ -278,7 +279,6 @@ void special_moves( int i,  int s ) {
   if (( piece[i] == EMPTY )&&(color[i] == s)) {
     fprintf(stderr,"#Special moves: Field %d belongs to %d, although empty!\n",i,s);
     print_board(stderr);
-    exit(1); 
     /* piece does not belong to side */
   }
 #endif
@@ -405,7 +405,6 @@ void special_moves_infl( int i,  int s ) {
   if (( piece[i] == EMPTY )&&(color[i] == s)) {
     fprintf(stderr,"#Special moves: Field %d belongs to %d, although empty!\n",i,s);
     print_board(stderr);
-    exit(1); 
     /* piece does not belong to side */
   }
 #endif
@@ -487,7 +486,6 @@ BOOL special_moves_caps( int i,  int s, int k ) {
   if (( piece[i] == EMPTY )&&(color[i] == s)) {
     fprintf(stderr,"#Special moves: Field %d belongs to %d, although empty!\n",i,s);
     print_board(stderr);
-    exit(1); 
     /* piece does not belong to side */
   }
 
@@ -664,7 +662,6 @@ int get_steps( int i, int j, int s ) {
   if (( piece[i] == EMPTY )&&(color[i] == s)) {
     fprintf(stderr,"#get_steps: Field %d belongs to %d, although empty!\n",i,s);
     print_board(stderr);
-    exit(1); 
     /* piece does not belong to side */
   }
 #endif
@@ -849,7 +846,6 @@ int get_steps_infl( int i, int j, int s ) {
   if (( piece[i] == EMPTY )&&(color[i] == s)) {
     fprintf(stderr,"#get_steps: Field %d belongs to %d, although empty!\n",i,s);
     print_board(stderr);
-    exit(1); 
     /* piece does not belong to side */
   }
 #endif
@@ -958,7 +954,6 @@ int get_steps_caps( int i, int j, int s ) {
   if (( piece[i] == EMPTY )&&(color[i] == s)) {
     fprintf(stderr,"#get_steps: Field %d belongs to %d, although empty!\n",i,s);
     print_board(stderr);
-    exit(1); 
     /* piece does not belong to side */
   }
 #endif
@@ -1477,6 +1472,13 @@ void gen_push_lion_move(int from, int over, int to, int bits)
 	  g->m.b.bits |= 2;
 	  g->score -= ( 100000 + piece[from] * 10);
 	}
+#ifdef DEBUG
+	if ( suicide(to) ) {
+	  fprintf(stderr,"Lion move %dx%d-%d ", from, over, to);
+	} else {
+	  fprintf(stderr,"Lion move %dx%d-%d* ", from, over, to);
+	}
+#endif
 }
 
 
@@ -1632,7 +1634,6 @@ BOOL make_igui( move_bytes m ) {
     print_board(stderr);
     fprintf(stderr,"#Error in make_igui: Capturing %s's %s, but no bit set!\n",(side ? "Gote" : "Sente"), piece_string[hist_dat[ply].capture]);
     save_game("normal-move");
-    exit();
   }
 #endif
 
@@ -1681,7 +1682,6 @@ BOOL make_FiD( move_bytes m ) {
     print_board(stderr);
     fprintf(stderr,"#Error in make_normal_move: Capturing %s's %s, but no bit set!\n",(side ? "Gote" : "Sente"), piece_string[hist_dat[ply].capture]);
     save_game("normal-move");
-    exit();
   }
 #endif
   if ( piece[(int)m.to] != EMPTY ) { /* capture */
@@ -1750,7 +1750,6 @@ BOOL make_normal_move( move_bytes m ) {
     print_board(stderr);
     fprintf(stderr,"#Error in make_normal_move: Capturing %s's %s, but no bit set!\n",(side ? "Gote" : "Sente"), piece_string[hist_dat[ply].capture]);
     save_game("normal-move");
-    exit();
   }
 #endif
   if ( piece[(int)m.to] != EMPTY ) { /* capture */

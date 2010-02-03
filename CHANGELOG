@@ -1,0 +1,77 @@
+--------------------- CHANGELOG ----------------------
+Latest changes:
+2010.02.01
+- first hack at keeping track of captures
+- improved ascii board, also for var_boards
+- fixed var_board for kanji mode
+- introduced unpadded_pieces_string to improve kifu and savegame
+- added 5 pieces to distinguish a GGn from a +RGn etc.
+
+2010.01.29
+- fixed bug which eliminated lion double moves
+
+2010.01.22
+- debugged attack() and in_check()
+- displaying checks now
+
+2010.01.22
+- "setup" will allow to change a position (permeates to savegames)
+- positions can be loaded and saved with "lpos" and "spos"
+  the files are in positions/ and can be loaded from savegames
+
+2010.01.21
+- added "exports" and "savegames" directories so main directory won't be cluttered
+- "m(oves)" now shows moves for both side, not only the one whose move it is
+- extended "inf", but still very buggy
+
+2010.01.20
+- give file to load as startup argument
+- show moves to squares with opponent inf as purple, hypothetical moves in blue, suicide moves in red, mark original square black
+
+2010.01.19
+fixed the following in TeX export
+- osho vs. gyokusho
+- upside down pieces
+- left and right hand side swapped (was actually up and down swapped)
+- spurious line at bottom of page (was page number)
+- png conversion with dvipng -D 200 looks nice, has to be autocropped (how?)
+ 
+
+2010.01.19
+- added arrows in "fullkanji" mode for easier identification of pieces
+- first hack at TeX export, to fix:
+  osho vs. gyokusho (done)
+  upside down pieces (done)
+  TODO: check promotions (uncomplete!!!!)
+  left and right hand side swapped for some reason (done)
+  spurious line at bottom of page prevents autocropping (done)
+  TODO: display last move with \definecolor{name}{gray}{.8} or
+  \definecolor{name}{rgb}{0, 0, .7} and \colorbox{name}{text}
+  add dot in four positions (done)
+  add directory for screens
+  TODO: provide TeX stuff in dist
+  add graphic formats to go on converting to (dvipng, dvigif, partly done)
+
+2010.01.18
+-fixed display of last move in full kanji mode
+2010.01.17
+- added: options "fullkanji", "kanji" and "ascii" for kanji or ascii display
+
+2010.01.16
+-added: options file to read in at startup (breaks for newline at end of file)
+-fixed bug: redo stack wasn't cleared after undo and entering new move
+-fixed identifymove: move shortcuts like 6cx or 9d+ are now identified correctly to consider only captures or promotional moves
+-fixed havoc resulting in pieces switching color and weird moves being executed with shortcuts
+-several small fixes to get rid of the warnings for tenjiku-ansi
+-several small bugs newly introduced
+
+
+2010.01.15
+-show last move and move no in "xxx to move" and on the board
+-shortcut 'u' for undo added
+-fixed 'verytame' FiD
+-added piece names to savegame (old-style savegames with "loadold")
+-readline support
+-added redo
+-added go to position after move
+

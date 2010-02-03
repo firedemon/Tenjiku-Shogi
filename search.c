@@ -103,7 +103,7 @@ void think(BOOL quiet)
 				EZ_AppendListBoxItem(pvbox,pvariant);
 			}
 #else
-			printf("%3d   %9ld  %9ld", i, nodes, x);
+			printf("%3d   %9ld  %9d", i, nodes, x);
 			for (j = 0; j < pv_length[0]; ++j)
 				printf("   %s", half_move_str(pv[0][j].b));
 			printf("\n");

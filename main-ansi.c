@@ -25,6 +25,7 @@ char savegamepath[1024] = "savegames";
 char positionpath[1024] = "positions";
 char positionfile[1024];
 
+BOOL annotate = TRUE;
 BOOL search_quiesce = TRUE;
 BOOL jgs_tsa = FALSE; /* tsa rule by default off */
 BOOL modern_lion_hawk = TRUE; /* tsa rule by default off */
@@ -195,7 +196,7 @@ int main(int argc,  char **argv)
 			redos=0; /* new line, so clear old redo stack */
 			print_board(stdout);
 			/* printf("Computer's move: %s\n", last_move_buf);*/
-			printf("Computer's move: %s\n", half_move_str(gen_dat[i].m.b));
+			printf("Computer's move: %s\n", move_str(gen_dat[i].m.b));
 		      }
 		    } else {
 		      have_book = FALSE; /* should be already set, but ... */
@@ -215,7 +216,7 @@ int main(int argc,  char **argv)
 		    redos=0;  /* new line, so clear old redo stack */
 		    print_board(stdout);
 		    /* printf("Computer's move: %s\n", last_move);*/
-		    printf("Computer's move: %s\n", half_move_str(pv[0][0].b));
+		    printf("Computer's move: %s\n", move_str(pv[0][0].b));
 		  }
 		  fflush(stdout);
 		  /* save the "backup" data because it will be overwritten */
@@ -648,9 +649,8 @@ int main(int argc,  char **argv)
 
 
 
-/* move_str returns a string with move m in coordinate notation */
 
-unsigned char *move_str(move_bytes m)
+unsigned char *ascii_move_str(move_bytes m)
 {
   static unsigned char str[25];
   char igui, igui2 = '-';
@@ -662,7 +662,7 @@ unsigned char *move_str(move_bytes m)
     else igui = '-';
   if (m.bits & 4) { /* lion double move */
     if (m.bits & 16)  /* promotion */
-      sprintf(str, "%s%d%c%c%d%c%c%d%c+", piece_string[piece[(int)m.from]],
+      sprintf(str, "%s%d%c%c%d%c%c%d%c+", unpadded_piece_string[m.oldpiece],
 	      16 - GetFile(m.from),
 	      GetRank(m.from) + 'a',
 	      igui,
@@ -672,7 +672,7 @@ unsigned char *move_str(move_bytes m)
 	      16 - GetFile(m.to),
 	      GetRank(m.to) + 'a');
     else  
-      sprintf(str, "%s%d%c%c%d%c%c%d%c", piece_string[piece[(int)m.from]],
+      sprintf(str, "%s%d%c%c%d%c%c%d%c", unpadded_piece_string[m.oldpiece],
 	      16 - GetFile(m.from),
 	      GetRank(m.from) + 'a',
 	      igui,
@@ -683,14 +683,14 @@ unsigned char *move_str(move_bytes m)
 	      GetRank(m.to) + 'a');
   } else {
     if (m.bits & 16)  /* promotion */
-      sprintf(str, "%s%d%c%c%d%c+",  piece_string[piece[(int)m.from]],
+      sprintf(str, "%s%d%c%c%d%c+",  unpadded_piece_string[m.oldpiece],
 	      16 - GetFile(m.from),
 	      GetRank(m.from) + 'a',
 	      igui,
 	      16 - GetFile(m.to),
 	      GetRank(m.to) + 'a');
     else
-    sprintf(str, "%s%d%c%c%d%c",  piece_string[piece[(int)m.from]],
+    sprintf(str, "%s%d%c%c%d%c",  unpadded_piece_string[m.oldpiece],
 	    16 - GetFile(m.from),
 	    GetRank(m.from) + 'a',
 	    igui,
@@ -699,6 +699,130 @@ unsigned char *move_str(move_bytes m)
 
   }
   return str;
+}
+
+unsigned char *kanji_move_str(move_bytes m)
+{
+  static unsigned char str[25];
+  char igui, igui2 = '-';
+
+  if (m.bits & 32) /* igui move */
+    igui = '!';
+  else 
+    if (m.bits & 1) igui = 'x';
+    else igui = '-';
+  if (m.bits & 4) { /* lion double move */
+    if (m.bits & 16)  /* promotion */
+      sprintf(str, "%s%d%c%c%d%c%c%d%c+", kanji_piece_string[m.oldpiece],
+	      16 - GetFile(m.from),
+	      GetRank(m.from) + 'a',
+	      igui,
+	      16 - GetFile(m.over),
+	      GetRank(m.over) + 'a',
+	      igui2,
+	      16 - GetFile(m.to),
+	      GetRank(m.to) + 'a');
+    else  
+      sprintf(str, "%s%d%c%c%d%c%c%d%c", kanji_piece_string[m.oldpiece],
+	      16 - GetFile(m.from),
+	      GetRank(m.from) + 'a',
+	      igui,
+	      16 - GetFile(m.over),
+	      GetRank(m.over) + 'a',
+	      igui2,
+	      16 - GetFile(m.to),
+	      GetRank(m.to) + 'a');
+  } else {
+    if (m.bits & 16)  /* promotion */
+      sprintf(str, "%s%d%c%c%d%c+",  kanji_piece_string[m.oldpiece],
+	      16 - GetFile(m.from),
+	      GetRank(m.from) + 'a',
+	      igui,
+	      16 - GetFile(m.to),
+	      GetRank(m.to) + 'a');
+    else
+    sprintf(str, "%s%d%c%c%d%c",  kanji_piece_string[m.oldpiece],
+	    16 - GetFile(m.from),
+	    GetRank(m.from) + 'a',
+	    igui,
+	    16 - GetFile(m.to),
+	    GetRank(m.to) + 'a');
+
+  }
+  return str;
+}
+
+unsigned char *fullkanji_move_str(move_bytes m)
+{
+  static unsigned char str[25];
+  char igui, igui2 = '-';
+
+
+  if (m.bits & 32) /* igui move */
+    igui = '!';
+  else 
+    if (m.bits & 1) igui = 'x';
+    else igui = '-';
+  if (m.bits & 4) { /* lion double move */
+    if (m.bits & 16)  /* promotion */
+      sprintf(str, "%s%s%d%c%c%d%c%c%d%c+", upper_kanji_string[m.oldpiece],  
+	      lower_kanji_string[m.oldpiece],
+	      16 - GetFile(m.from),
+	      GetRank(m.from) + 'a',
+	      igui,
+	      16 - GetFile(m.over),
+	      GetRank(m.over) + 'a',
+	      igui2,
+	      16 - GetFile(m.to),
+	      GetRank(m.to) + 'a');
+    else  
+      sprintf(str, "%s%s%d%c%c%d%c%c%d%c", upper_kanji_string[m.oldpiece],
+	      lower_kanji_string[m.oldpiece],
+	      16 - GetFile(m.from),
+	      GetRank(m.from) + 'a',
+	      igui,
+	      16 - GetFile(m.over),
+	      GetRank(m.over) + 'a',
+	      igui2,
+	      16 - GetFile(m.to),
+	      GetRank(m.to) + 'a');
+  } else {
+    if (m.bits & 16)  /* promotion */
+      sprintf(str, "%s%s%d%c%c%d%c+",  upper_kanji_string[m.oldpiece],
+	      lower_kanji_string[m.oldpiece],
+	      16 - GetFile(m.from),
+	      GetRank(m.from) + 'a',
+	      igui,
+	      16 - GetFile(m.to),
+	      GetRank(m.to) + 'a');
+    else
+    sprintf(str, "%s%s%d%c%c%d%c",  upper_kanji_string[m.oldpiece],
+	      lower_kanji_string[m.oldpiece],
+	    16 - GetFile(m.from),
+	    GetRank(m.from) + 'a',
+	    igui,
+	    16 - GetFile(m.to),
+	    GetRank(m.to) + 'a');
+
+  }
+  return str;
+}
+
+/* move_str returns a string with move m in coordinate notation */
+
+unsigned char *move_str(move_bytes m) {
+  if ( m.oldpiece == EMPTY ) {
+    fprintf(stderr, "move_str called w empty square!\n");
+    return("error");
+    }
+
+  if (fullkanji) {
+    return( fullkanji_move_str( m ));
+  } else if ( kanji ) {
+    return( kanji_move_str( m ));
+  } else {
+      return( ascii_move_str( m ));
+  }
 }
 
 /* half_move_str returns a string with move m in coordinate notation w.o. piece */
@@ -757,6 +881,7 @@ unsigned char *half_move_str(move_bytes m)
 /* print_board prints the board */
 
 void print_board( FILE *fd ) {
+  int i;
   if ( fullkanji )
     full_kanji_print_board( fd );
   else if ( kanji ) {
@@ -764,19 +889,27 @@ void print_board( FILE *fd ) {
   } else {
     ascii_print_board( fd );
   }
+  printf("Captured: Sente: ");
+  for ( i = 0; i < PIECE_TYPES; i++ ) 
+    if (captured[LIGHT][i])
+      printf("%s, ", piece_string[i]);
+  printf("\n          Gote: ");
+  for ( i = 0; i < PIECE_TYPES; i++ ) 
+    if (captured[DARK][i])
+      printf("%s, ", piece_string[i]);
+  printf("\n");
   if ( lost( side )) {
     fprintf( stdout, "You have lost the game!\n");
   } else if ( in_check( side )) {
     fprintf( stdout, "You're in CHECK!\n");
   }
-
 }
 
 
 void ascii_print_board( FILE *fd )
 {
   
-  int i;
+  int i, j = 1;
   int from_square, to_square; /* last move */
   int next_from, next_to; /* next move */
   /* get the last move, should be in undo_dat[undos] */
@@ -796,67 +929,80 @@ void ascii_print_board( FILE *fd )
   }
 
   fprintf( fd,"\e[0m\n\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n");
-  fprintf( fd,"  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+\na ");
+  fprintf( fd,"  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\na ");
   for (i = 0; i < NUMSQUARES; ++i) {
     switch (color[i]) {
     case EMPTY:
       if (( i == from_square )||( i == to_square )) {
-	fprintf( fd, "|\e[43m   \e[0m");
+	if ( i %RANKS == 0 )
+	  fprintf( fd, "║\e[43m   \e[0m");
+	else
+	  fprintf( fd, "│\e[43m   \e[0m");
       } else {
-	fprintf( fd,"|   ");
+	if ( i % RANKS == 0 )
+	  fprintf( fd,"║   ");
+	else
+	  fprintf( fd,"│   ");
       }
       break;
     case LIGHT:
       if (( i == from_square )||( i == to_square )) {
-	fprintf( fd,"|\e[43m\e[1m%s\e[0m", piece_string[piece[i]]);
+	if ( i %RANKS == 0 )
+	  fprintf( fd,"║\e[43m\e[1m%s\e[0m", piece_string[piece[i]]);
+	else
+	  fprintf( fd,"│\e[43m\e[1m%s\e[0m", piece_string[piece[i]]);
       } else {
-	fprintf( fd,"|\e[1m%s\e[0m", piece_string[piece[i]]);
+	if ( i %RANKS == 0 )
+	  fprintf( fd,"║\e[1m%s\e[0m", piece_string[piece[i]]);
+	else
+	  fprintf( fd,"│\e[1m%s\e[0m", piece_string[piece[i]]);
       }
       break;
     case DARK:
-      if (( i == from_square )||( i == to_square )) {
-	fprintf( fd,"|\e[43m%s\e[0m", piece_string[piece[i]]);
+       if (( i == from_square )||( i == to_square )) {
+	if ( i %RANKS == 0 )
+	  fprintf( fd,"║\e[43m%s\e[0m", piece_string[piece[i]]);
+	else
+	  fprintf( fd,"│\e[43m%s\e[0m", piece_string[piece[i]]);
       } else {
-	fprintf( fd,"|%s", piece_string[piece[i]]);
+	if ( i %RANKS == 0 )
+	  fprintf( fd,"║%s", piece_string[piece[i]]);
+	else
+	  fprintf( fd,"│%s", piece_string[piece[i]]);
       }
       break;
     }
-    if ((i + 1) % RANKS == 0 && i != LASTSQUARE)
-      fprintf( fd,"| %c\n  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
+    if ((i + 1) % RANKS == 0 && i != LASTSQUARE) {
+      if ( annotate && undos && (j <= undos )) {
+	fprintf( fd,"║ %c   %d. %s\n", 'a' + GetRank(i), j, move_str(undo_dat[j-1].m.b));
+	j++;
+	if ( j <=undos ) {
+	  fprintf( fd,"  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢     %d. %s \n%c ", j, move_str(undo_dat[j-1].m.b), 'b' + GetRank(i)); 
+	  j++;
+	} else {
+	  fprintf( fd,"  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
+	}
+      } else {
+	fprintf( fd,"║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
+      }
     }
-  fprintf( fd,"| p\n  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
+  }
+  fprintf( fd,"║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
 
-  if ( undos ) {
-    if ( undo_dat[undos-1].m.b.over != EMPTY ) {
-      fprintf( fd,"%s to move (last move %d: %s from %d%c over %d%c to %d%c)\n", 
-	       side_name[side],undos, piece_string[undo_dat[undos-1].oldpiece],
-	       16 - GetFile(undo_dat[undos-1].m.b.from), undo_dat[undos-1].m.b.from/16 + 'a', 
-	       16 - GetFile(undo_dat[undos-1].m.b.over),  undo_dat[undos-1].m.b.over/16 + 'a', 
-	       16 - GetFile(undo_dat[undos-1].m.b.to), undo_dat[undos-1].m.b.to/16 + 'a');
-    } else {      
-      fprintf( fd,"%s to move (last move %d: %s from %d%c to %d%c)\n", 
-	       side_name[side],undos, piece_string[undo_dat[undos-1].oldpiece],
-	       16 - GetFile(undo_dat[undos-1].m.b.from), GetRank(undo_dat[undos-1].m.b.from) + 'a', 
-	       16 - GetFile(undo_dat[undos-1].m.b.to),  GetRank(undo_dat[undos-1].m.b.to) + 'a');
-    }
+  if ( undos ) { 
+    fprintf( fd, "%s to move (last move: %d. %s)\n",
+	     side_name[side], undos, move_str(undo_dat[undos-1].m.b));
+
   } else {
     fprintf( fd,"%s to move\n", 
 	     side_name[side]);
   }
 
   if ( redos ) {
-    if ( redo_dat[redos-1].m.b.over != EMPTY ) {
-      fprintf( fd,"\t(next move %d: %s from %d%c over %d%c to %d%c)", 
-	       undos+1, piece_string[redo_dat[redos-1].oldpiece],
-	       16 - GetFile(redo_dat[redos-1].m.b.from), redo_dat[redos-1].m.b.from/16 + 'a', 
-	       16 - GetFile(redo_dat[redos-1].m.b.over),  redo_dat[redos-1].m.b.over/16 + 'a', 
-	       16 - GetFile(redo_dat[redos-1].m.b.to), redo_dat[redos-1].m.b.to/16 + 'a');
-    } else {      
-      fprintf( fd,"\t(next move %d: %s from %d%c to %d%c)", 
-	       undos+1, piece_string[redo_dat[redos-1].oldpiece],
-	       16 - GetFile(redo_dat[redos-1].m.b.from), GetRank(redo_dat[redos-1].m.b.from) + 'a', 
-	       16 - GetFile(redo_dat[redos-1].m.b.to),  GetRank(redo_dat[redos-1].m.b.to) + 'a');
-    }
+   fprintf( fd, "(next move: %d. %s)\n",
+	      undos+1, move_str(redo_dat[redos-1].m.b));
+  } else {
+    fprintf( fd, "(no next move)\n");
   }
   fprintf( fd,"\n");
   fflush(fd);
@@ -1287,7 +1433,7 @@ void really_load_game( char *fn ) {
 	if ( prom == '+' ) promote = TRUE;
       }
       sprintf(hist_s,"%d%c%c%d%c",from_file, from_rank,
-	      igui,to_file,to_rank);
+	      igui,to_file,to_rank); /* readline stuff */
       add_history(hist_s);
 
       from = 16 - from_file;
@@ -1871,7 +2017,7 @@ void show_moves( void ) {
 	    printf("║%s\e[1m%s\e[0m", 
 		   color_string[var_board[i]], kanji_piece_string[piece[i]]);
 	  else
-	    printf("|%s\e[1m%s\e[0m", 
+	    printf("│%s\e[1m%s\e[0m", 
 		   color_string[var_board[i]], kanji_piece_string[piece[i]]);
 	  break;
 	case DARK:
@@ -1879,7 +2025,7 @@ void show_moves( void ) {
 	    printf("║%s%s\e[0m", 
 		   color_string[var_board[i]], kanji_piece_string[piece[i]]);
 	  else
-	    printf("|%s%s\e[0m", color_string[var_board[i]], 
+	    printf("│%s%s\e[0m", color_string[var_board[i]], 
 		   kanji_piece_string[piece[i]]);
 	  break;	
 	}
@@ -1889,19 +2035,19 @@ void show_moves( void ) {
 	  if ( i % RANKS == 0 )
 	    printf("║   ");
 	  else
-	    printf("|   ");
+	    printf("│   ");
 	  break;
 	case LIGHT:
 	  if ( i % RANKS == 0 )
 	    printf("║\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
 	  else
-	    printf("|\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	    printf("│\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
 	  break;
 	case DARK:
 	  if ( i % RANKS == 0 )
 	    printf("║%s", kanji_piece_string[piece[i]]);
 	  else
-	    printf("|%s", kanji_piece_string[piece[i]]);
+	    printf("│%s", kanji_piece_string[piece[i]]);
 	  break;
 	}
       }
@@ -1911,37 +2057,55 @@ void show_moves( void ) {
     printf( "║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
   } else { /* ascii board */
     printf("\n\n   16  15  14  13  12  11  10  9    8   7   6   5   4   3   2   1\n");
-    printf("  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+\na ");
+    printf(  "  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\na ");
     for (i = 0; i < NUMSQUARES; ++i) {
       if ( var_board[i] ) {
 	switch (color[i]) {
 	case EMPTY:
-	  printf("|%s   \e[0m", color_string[var_board[i]]); 
+	  if ( i % RANKS == 0 )
+	    printf("║%s   \e[0m", color_string[var_board[i]]); 
+	  else
+	    printf("│%s   \e[0m", color_string[var_board[i]]); 
 	  break;
 	case LIGHT:
-	  printf("|%s\e[1m%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
+	  if ( i % RANKS == 0 )
+	    printf("║%s\e[1m%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
+	  else
+	    printf("│%s\e[1m%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
 	  break;
 	case DARK:
-	  printf("|%s%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
+	  if ( i % RANKS == 0 )
+	    printf("║%s%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
+	  else
+	    printf("│%s%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
 	  break;	
 	}
       } else {
 	switch (color[i]) {
 	case EMPTY:
-	  printf("|   ");
+	  if ( i % RANKS == 0 )
+	    printf("║   ");
+	  else
+	    printf("│   ");
 	  break;
 	case LIGHT:
-	  printf("|\e[1m%s\e[0m", piece_string[piece[i]]);
+	  if ( i % RANKS == 0 )
+	    printf("║\e[1m%s\e[0m", piece_string[piece[i]]);
+	  else
+	    printf("│\e[1m%s\e[0m", piece_string[piece[i]]);
 	  break;
 	case DARK:
-	  printf("|%s", piece_string[piece[i]]);
+	  if ( i % RANKS == 0 )
+	    printf("║%s", piece_string[piece[i]]);
+	  else
+	    printf("│%s", piece_string[piece[i]]);
 	  break;
 	}
       }
       if ((i + 1) % RANKS == 0 && i != LASTSQUARE)
-	printf("| %c\n  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
+	printf( "║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
     }
-    printf("| p\n  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+\n   16  15  14  13  12  11  10   9    8    7    6    5    4    3    2    1\n\n");
+    printf( "║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
   }   
   fflush(stdout);
 }
@@ -2282,13 +2446,13 @@ void show_influence( void ) {
 	  if ( i % RANKS == 0 )
 	    printf("║%s\e[1m%s\e[0m",inf_color[var_board[i]], kanji_piece_string[piece[i]]);
 	  else
-	    printf("|%s\e[1m%s\e[0m",inf_color[var_board[i]], kanji_piece_string[piece[i]]);
+	    printf("│%s\e[1m%s\e[0m",inf_color[var_board[i]], kanji_piece_string[piece[i]]);
 	  break;
 	case DARK:
 	  if ( i % RANKS == 0 )
 	    printf("║%s%s\e[0m",inf_color[var_board[i]], kanji_piece_string[piece[i]]);
 	  else
-	    printf("|%s%s\e[0m",inf_color[var_board[i]], kanji_piece_string[piece[i]]);
+	    printf("│%s%s\e[0m",inf_color[var_board[i]], kanji_piece_string[piece[i]]);
 	  break;	
 	}
       } else {
@@ -2297,19 +2461,19 @@ void show_influence( void ) {
 	  if ( i % RANKS == 0 )
 	    printf("║   ");
 	  else
-	    printf("|   ");
+	    printf("│   ");
 	  break;
 	case LIGHT:
 	  if ( i % RANKS == 0 )
 	    printf("║\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
 	  else
-	    printf("|\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	    printf("│\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
 	  break;
 	case DARK:
 	  if ( i % RANKS == 0 )
 	    printf("║%s", kanji_piece_string[piece[i]]);
 	  else
-	    printf("|%s", kanji_piece_string[piece[i]]);
+	    printf("│%s", kanji_piece_string[piece[i]]);
 	  break;
 	}
       }
@@ -2319,38 +2483,55 @@ void show_influence( void ) {
     printf( "║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
   } else { /* ascii board */
     printf("\e[0m\n\n   16  15  14  13  12  11  10  9    8   7   6   5   4   3   2   1\n");
-    printf("  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+\na ");
+    printf(  "  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\na ");
     for (i = 0; i < NUMSQUARES; ++i) {
       if ( var_board[i] ) {
 	switch (color[i]) {
 	case EMPTY:
-	  printf("|\e[42m   \e[0m"); 
+	  if ( i % RANKS == 0 )
+	    printf("║\e[42m   \e[0m"); 
+	  else
+	    printf("│\e[42m   \e[0m");
 	  break;
 	case LIGHT:
-	  printf("|\e[45m\e[1m%s\e[0m", piece_string[piece[i]]);
+	  if ( i % RANKS == 0 )
+	    printf("║\e[45m\e[1m%s\e[0m", piece_string[piece[i]]);
+	  else
+	    printf("│\e[45m\e[1m%s\e[0m", piece_string[piece[i]]);
 	  break;
 	case DARK:
-	  printf("|\e[45m%s\e[0m", piece_string[piece[i]]);
+	  if ( i % RANKS == 0 )
+	    printf("║\e[45m%s\e[0m", piece_string[piece[i]]);
+	  else
+	    printf("│\e[45m%s\e[0m", piece_string[piece[i]]);
 	  break;	
 	}
-      }
-      else {
+      } else {
 	switch (color[i]) {
 	case EMPTY:
-	  printf("|   ");
+	  if ( i % RANKS == 0 )
+	    printf("║   "); 
+	  else
+	    printf("│   ");
 	  break;
 	case LIGHT:
-	  printf("|\e[1m%s\e[0m", piece_string[piece[i]]);
+	  if ( i % RANKS == 0 )
+	    printf("║\e[1m%s\e[0m", piece_string[piece[i]]);
+	  else
+	    printf("│\e[1m%s\e[0m", piece_string[piece[i]]);
 	  break;
 	case DARK:
-	  printf("|%s", piece_string[piece[i]]);
+	  if ( i % RANKS == 0 )
+	    printf("║%s", piece_string[piece[i]]);
+	  else
+	    printf("│%s", piece_string[piece[i]]);
 	  break;
 	}
       }
       if ((i + 1) % RANKS == 0 && i != LASTSQUARE)
-	printf("| %c\n  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
+	printf( "║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
     }
-    printf("| p\n  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
+    printf( "║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
   }
   fflush(stdout);
 

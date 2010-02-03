@@ -47,7 +47,7 @@ void init()
 	EZ_FreezeWidget(board);
 #endif
 	for (i = 0; i < NUMSQUARES; ++i) {
-		color[i] = init_color[i];
+		color[i] = init_boardcolor[i];
 		piece[i] = init_piece[i];
 #ifdef EZ
 		/* fprintf(stderr,"%d\n",i); */
@@ -72,6 +72,10 @@ void init()
 	undos = 0;
 	redos = 0;
 	loaded_position = FALSE;
+	for ( i = 0; i < PIECE_TYPES; i++ ) {
+	  captured[side][i] = 0;
+	  captured[xside][i] = 0;
+	}
 }
 
 
@@ -278,7 +282,7 @@ void special_moves( int i,  int s ) {
 #ifdef DEBUG
   if (( piece[i] == EMPTY )&&(color[i] == s)) {
     fprintf(stderr,"#Special moves: Field %d belongs to %d, although empty!\n",i,s);
-    print_board(stderr);
+    /* print_board(stderr); */
     /* piece does not belong to side */
   }
 #endif
@@ -404,7 +408,7 @@ void special_moves_infl( int i,  int s ) {
 #ifdef DEBUG
   if (( piece[i] == EMPTY )&&(color[i] == s)) {
     fprintf(stderr,"#Special moves: Field %d belongs to %d, although empty!\n",i,s);
-    print_board(stderr);
+    /* print_board(stderr); */
     /* piece does not belong to side */
   }
 #endif
@@ -485,7 +489,7 @@ BOOL special_moves_caps( int i,  int s, int k ) {
 
   if (( piece[i] == EMPTY )&&(color[i] == s)) {
     fprintf(stderr,"#Special moves: Field %d belongs to %d, although empty!\n",i,s);
-    print_board(stderr);
+    /* print_board(stderr); */
     /* piece does not belong to side */
   }
 
@@ -661,7 +665,7 @@ int get_steps( int i, int j, int s ) {
 #ifdef DEBUG
   if (( piece[i] == EMPTY )&&(color[i] == s)) {
     fprintf(stderr,"#get_steps: Field %d belongs to %d, although empty!\n",i,s);
-    print_board(stderr);
+    /* print_board(stderr); */
     /* piece does not belong to side */
   }
 #endif
@@ -845,7 +849,7 @@ int get_steps_infl( int i, int j, int s ) {
 #ifdef DEBUG
   if (( piece[i] == EMPTY )&&(color[i] == s)) {
     fprintf(stderr,"#get_steps: Field %d belongs to %d, although empty!\n",i,s);
-    print_board(stderr);
+    /* print_board(stderr); */
     /* piece does not belong to side */
   }
 #endif
@@ -953,7 +957,7 @@ int get_steps_caps( int i, int j, int s ) {
 #ifdef DEBUG
   if (( piece[i] == EMPTY )&&(color[i] == s)) {
     fprintf(stderr,"#get_steps: Field %d belongs to %d, although empty!\n",i,s);
-    print_board(stderr);
+    /* print_board(stderr); */
     /* piece does not belong to side */
   }
 #endif
@@ -1136,14 +1140,15 @@ BOOL higher( int jumping, int standing ) {
   /* returns true if standing piece is of higher hierarchy than jumping piece */
   int thatpiece = piece[standing];
   int thispiece = piece[jumping];
-  if (( thatpiece == KING )|| ( thatpiece == GREAT_GENERAL)) return TRUE;
-  if ( thatpiece == VICE_GENERAL ) {
-    if ( thispiece == GREAT_GENERAL ) return FALSE;
+  if (( thatpiece == KING )|| ( thatpiece == GREAT_GENERAL) || ( thatpiece == PGREAT_GENERAL)) return TRUE;
+  if (( thatpiece == VICE_GENERAL ) ||( thatpiece == PVICE_GENERAL )) {
+    if (( thispiece == GREAT_GENERAL )||( thispiece == PGREAT_GENERAL )) return FALSE;
     else return TRUE;
   }
   if (( thatpiece == ROOK_GENERAL )||( thatpiece == BISHOP_GENERAL )||
       ( thatpiece == PROOK_GENERAL )||( thatpiece == PBISHOP_GENERAL )) {
-    if (( thispiece == VICE_GENERAL) || (thispiece == GREAT_GENERAL))
+    if (( thispiece == VICE_GENERAL) || (thispiece == GREAT_GENERAL)||
+	( thispiece == PVICE_GENERAL) || (thispiece == PGREAT_GENERAL))
       return FALSE;
     else return TRUE;
   }
@@ -1503,23 +1508,29 @@ BOOL makemove(move_bytes m)
 {
   int i;
 
-  if ( m.from == m.to ) {
+  if ( m.from == m.to ) { /* igui is notated differently */
     fprintf(stderr,"#makemove: illegal move: %s\n", half_move_str(m));
     return FALSE;
   }
   if (piece[(int)m.from] == EMPTY) return FALSE; /* shouldn't happen */
+  else 
+    m.oldpiece = piece[(int)m.from]; /* we need this information here, too, for showing
+					the undos and redos and only the bits go onto the
+					undo_dat and redo_dat */
 
-  if (lost(side) || lost(xside)) return FALSE;
+  if (lost(side) || lost(xside)) return FALSE; /* no moves after end of game */
 
   /* tame FiD doesn't burn when capturing */
   if ( tame_FiD ) {
     if ( piece[(int)m.to] == EMPTY ) {
-      for (i = 0; i < 8; i++ ) 
+      for (i = 0; i < 8; i++ ) {
 	hist_dat[ply].burn[i] = EMPTY;
+      }
     }
   } else {
-    for (i = 0; i < 8; i++ ) 
+    for (i = 0; i < 8; i++ ) {
       hist_dat[ply].burn[i] = EMPTY;
+    }
   }
   if ( piece[(int)m.to] == FIRE_DEMON ) /* we've captured an FiD */
     fire_demons[xside]--;
@@ -1631,7 +1642,7 @@ BOOL make_igui( move_bytes m ) {
   hist_dat[ply].last_capture = last_capture;
 #ifdef DEBUG  
   if ((hist_dat[ply].capture != EMPTY ) && !(m.bits & 1)) {
-    print_board(stderr);
+    /* print_board(stderr); */
     fprintf(stderr,"#Error in make_igui: Capturing %s's %s, but no bit set!\n",(side ? "Gote" : "Sente"), piece_string[hist_dat[ply].capture]);
     save_game("normal-move");
   }
@@ -1679,7 +1690,7 @@ BOOL make_FiD( move_bytes m ) {
   hist_dat[ply].last_capture = last_capture;
 #ifdef DEBUG  
   if ((hist_dat[ply].capture != EMPTY ) && !(m.bits & 1)) {
-    print_board(stderr);
+    /* print_board(stderr); */
     fprintf(stderr,"#Error in make_normal_move: Capturing %s's %s, but no bit set!\n",(side ? "Gote" : "Sente"), piece_string[hist_dat[ply].capture]);
     save_game("normal-move");
   }
@@ -1745,9 +1756,12 @@ BOOL make_normal_move( move_bytes m ) {
   hist_dat[ply].capture = piece[(int)m.to];
   hist_dat[ply].last_capture = last_capture;
   hist_dat[ply].over = (int)m.over; /* should not be needed */
+
+  captured[xside][piece[(int)m.to]]++;
+
 #ifdef DEBUG  
   if ((hist_dat[ply].capture != EMPTY ) && !(m.bits & 1)) {
-    print_board(stderr);
+    /* print_board(stderr); */
     fprintf(stderr,"#Error in make_normal_move: Capturing %s's %s, but no bit set!\n",(side ? "Gote" : "Sente"), piece_string[hist_dat[ply].capture]);
     save_game("normal-move");
   }
@@ -1901,7 +1915,7 @@ void take_back_igui(move_bytes m) {
     color[(int)m.to] = xside;
     piece[(int)m.to] = hist_dat[ply].capture;
   } else {
-    print_board(stderr);
+    /* print_board(stderr); */
     fprintf(stderr,"#Error in take_back_igui: capture: %d\n", hist_dat[ply].capture);
   }
   return;
@@ -1933,7 +1947,7 @@ void take_back_FiD(move_bytes m) {
     color[(int)m.to] = xside;
     piece[(int)m.to] = hist_dat[ply].capture;
   } else {
-    print_board(stderr);
+    /* print_board(stderr); */
     fprintf(stderr,"#Error in take_back_FiD\n");
   }
   return;
@@ -1955,6 +1969,7 @@ void take_back_normal(move_bytes m) { /* can be capture or not */
   } else if ( m.bits & 1 ) {
     color[(int)m.to] = xside;
     piece[(int)m.to] = hist_dat[ply].capture;
+    captured[xside][piece[(int)m.to]]--;
     if ( hist_dat[ply].capture == FIRE_DEMON ) {
       fire_demons[xside]++;
     }

@@ -67,10 +67,18 @@ void process_arguments(int argc, char **argv);
 int main();
 unsigned char *move_str(move_bytes m);
 unsigned char *half_move_str(move_bytes m);
+
 void print_board( FILE *fd );
+
+void curses_ascii_print_board();
+void curses_print_board();
+void curses_kanji_print_board();
+void curses_full_kanji_print_board();
+
 void ascii_print_board( FILE *fd );
 void kanji_print_board( FILE *fd );
 void full_kanji_print_board( FILE *fd );
+
 void xboard();
 #ifdef EZ
 void load_game(EZ_Widget *widget, void *dat);

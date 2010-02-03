@@ -83,15 +83,22 @@
 #define PWATER_BUFFALO          57
 #define PBISHOP_GENERAL         58
 #define PROOK_GENERAL           59
-#define PCHARIOT_SOLDIER         60
+#define PCHARIOT_SOLDIER        60
+/* pfree_eagle, plion_hawk, pfire_demon, pvice_general, pgreat_general */
+#define PFREE_EAGLE             61
+#define PLION_HAWK              62
+#define PFIRE_DEMON             63
+#define PVICE_GENERAL           64
+#define PGREAT_GENERAL          65
+
 /* that's different move types, so a 
    SM and a +C are *one*. G and +P
    have different symbols though, so they're
    two
 */
-#define PIECE_TYPES             61
+#define PIECE_TYPES             66
 
-#define EMPTY			61
+#define EMPTY			66
 #define BOTH                    255
 
 #define NUMSQUARES               256
@@ -144,6 +151,9 @@ extern char position_file[1024];
 
 extern move_type move_types[PIECE_TYPES][9];
 
+/* e.g. light_captures[FIRE_DEMON] is the number of light FiDs captured */
+int captured[2][PIECE_TYPES];
+
 /* number of pieces for both sides since a bare king loses unless
    he can bare the other king in the next move in which case it's
    a draw.  */ 
@@ -174,27 +184,28 @@ typedef struct {
   unsigned char promote;
   unsigned char bits;
   unsigned char align1;
-  unsigned char align2;
-  unsigned char align3;
+  /*  unsigned char align2;
+      unsigned char align3; */
+  int oldpiece;
 
 } move_bytes;
 
 typedef union {
 	move_bytes b;
 	long long u;
-} move;
+} tenjikumove;
 
 /* an element of the move stack. it's just a move with a
    score, so it can be sorted by the search functions. */
 typedef struct {
-	move m;
+	tenjikumove m;
 	long score;
 } gen_t;
 
 /* an element of the history stack, with the information
    necessary to take a move back. */
 typedef struct {
-  move m;
+  tenjikumove m;
   int oldpiece;
   int over; /* Ln, HF, SEg, square over which it moves */
   int capture;  
@@ -212,6 +223,9 @@ extern BOOL search_quiesce;
 extern BOOL loaded_position;
 /* TRUE if position is loaded from a file, not played from the 
    initial position */
+
+extern BOOL annotate;
+/* TRUE if the moves are displayed next to the board in a column */
 
 extern BOOL jgs_tsa; 
 /* TRUE if tsa jgs, FALSE for my jgs */

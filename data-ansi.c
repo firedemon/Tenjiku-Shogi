@@ -50,7 +50,7 @@ long stop_time;
 long nodes;  /* the number of nodes we've searched */
 
 /* a "triangular" PV array */
-move pv[HIST_STACK][HIST_STACK];
+tenjikumove pv[HIST_STACK][HIST_STACK];
 int pv_length[HIST_STACK];
 BOOL follow_pv;
 
@@ -125,19 +125,23 @@ int offsets[PIECE_TYPES] = {
 	/* CP, FO, FS, FBo, HT, MGn, +P, W, WH */
 	8, 6, 8, 6, 6, 3, 6, 4, 4,
 	/* FK, SM, SSd, VM, VSd, R, Ln, B, DH, DK, HF, SEg, WB, BGn, RGn */
-	8, 4, 4, 4, 4, 4, 0, 4, 8, 8, 8, 8, 8, 4, 4,8
+	8, 4, 4, 4, 4, 4, 0, 4, 8, 8, 8, 8, 8, 4, 4, 8,
+	/* pfree_eagle, plion_hawk, pfire_demon, pvice_general, pgreat_general */
+	8, 4, 6, 4, 8
 };
+/* pfree_eagle, plion_hawk, pfire_demon, pvice_general, pgreat_general */
 
 int promotion[PIECE_TYPES] = {
   TOKIN, 0, CROWN_PRINCE, PROOK, PVERTICAL_MOVER, PSIDE_MOVER, 
   PVERTICAL_SOLDIER, PBISHOP, PSIDE_SOLDIER, WHITE_HORSE, 
-  WHALE, HEAVENLY_TETRARCHS, FLYING_STAG, PLION, PFREE_KING, FREE_EAGLE, FREE_BOAR, 
-  PWATER_BUFFALO, FLYING_OX, PCHARIOT_SOLDIER, PDRAGON_KING, LION_HAWK, 
-  PDRAGON_HORSE, PHORNED_FALCON, PSOARING_EAGLE, PBISHOP_GENERAL, PROOK_GENERAL, FIRE_DEMON, MULTI_GENERAL, VICE_GENERAL, 
-  GREAT_GENERAL, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0
+  WHALE, HEAVENLY_TETRARCHS, FLYING_STAG, PLION, PFREE_KING, PFREE_EAGLE, FREE_BOAR, 
+  PWATER_BUFFALO, FLYING_OX, PCHARIOT_SOLDIER, PDRAGON_KING, PLION_HAWK, 
+  PDRAGON_HORSE, PHORNED_FALCON, PSOARING_EAGLE, PBISHOP_GENERAL, PROOK_GENERAL, PFIRE_DEMON, 
+  MULTI_GENERAL, PVICE_GENERAL, 
+  PGREAT_GENERAL, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
 move_type move_types[PIECE_TYPES][9] = {
@@ -201,7 +205,14 @@ move_type move_types[PIECE_TYPES][9] = {
   { lion, slide, lion, slide, slide, slide, slide, slide, none },  /* SEg */
   { slide, slide, slide, two_steps, two_steps, slide, slide, slide, none },/*WB*/
   { jumpslide, jumpslide, jumpslide, jumpslide, none, none, none, none, none },  /* BGn */
-  { jumpslide, jumpslide, jumpslide, jumpslide, none, none, none, none, none }  /* RGn */
+  { jumpslide, jumpslide, jumpslide, jumpslide, none, none, none, none, none },  /* RGn */
+  { slide, slide, slide, two_steps, two_steps, slide, slide, slide, none },  /* Chariot Soldier */
+/* pfree_eagle, plion_hawk, pfire_demon, pvice_general, pgreat_general */
+  { slide, free_eagle, slide, free_eagle, free_eagle, slide, free_eagle, slide, none },  /* pFEg */
+  { slide, slide, slide, slide, none, none, none, none, area2 },  /* pLHk */
+  { slide, slide, slide, slide, slide, slide, none, none, area3 },  /* pFiD */
+  { jumpslide, jumpslide, jumpslide, jumpslide, none, none, none, none, area3 },  /* pVGn */
+  { jumpslide, jumpslide, jumpslide, jumpslide, jumpslide, jumpslide, jumpslide, jumpslide, none }  /* pGGn */
 };
 
 int lion_jumps[16] = {
@@ -272,55 +283,62 @@ int offset[2][PIECE_TYPES][8] = {
   { -21, -1, -19, -20, 20, 19, 1, 21 },  /* WB */
   { -21, -19, 21, 19, 0, 0, 0, 0 },  /* BGn */
   { -1, 1, 20, -20, 0, 0, 0, 0 },  /* RGn */
- }, /* gote's pieces */
- { { 20, 0, 0, 0, 0, 0, 0, 0 },       /* Pawn */
-  { -21, -20, -19, -1, 1, 19, 20, 21 },  /* King */
-  { -21, -19, -1, 1, 19, 20, 21, 0 },  /* Drunken Elephant */
-  {  21, 20, 19, 1, -1, -20, 0, 0 },  /* Gold */
-  { -21, -19, 19, 21, 20, 0, 0, 0 },   /* Silver */
-  {  21, 20, 19, -20, 0, 0, 0, 0 },  /* Copper */
-  {  21, 20, 19, 0, 0, 0, 0, 0 },  /* Iron */
-  { -21, -19, 19, 21, 20, -20, 0, 0 },   /* Ferocious Leopard */
-  {  41, 39, 0, 0, 0, 0, 0, 0 },     /* Knight */
-  {  20, 0, 0, 0, 0, 0, 0, 0 },       /* Lance */
-  { -20, 20, 0, 0, 0, 0, 0, 0 },       /* Reverse Chariot */
-  { -21, -20, -19, -1, 1, 19, 20, 21 },  /* Chariot Soldier */
-  { -21, -20, -19, -1, 21, 19, 1, 0 },  /* Blind Tiger */
-  { -21, -40, -19, -2, 21, 19, 2, 40 },  /* Kylin */
-  { -42, -20, -38, -1, 42, 38, 1, 20 },  /* Phoenix */
-  { -21, -20, -19, -1, 1, 19, 20, 21 },  /* Free King */
-  { -1, 1, 20, -20, 0, 0, 0, 0 },  /* SM */
-  { -1, 1, 20, -20, 0, 0, 0, 0 },  /* SSd */
-  { 20, -20, -1, 1, 0, 0, 0, 0 },  /* VM */
-  { 20, -20, 1, -1, 0, 0, 0, 0 },  /* VSd */
-  { -1, 1, 20, -20, 0, 0, 0, 0 },  /* Rook */
-  { 0, 0, 0, 0, 0, 0, 0, 0 }, /* Lion */
-  { -21, -19, 21, 19, 0, 0, 0, 0 },  /* B */
-  { -21, -19, 21, 19, 20, -20, -1, 1 },  /* DH */
-   { 20, -20, -1, 1, -21, -19, 21, 19 },  /* DK */
-  { -21, 20, -19, -1, 1, 19, -20, 21 },  /* HF */
-  { 21, -20, 19, -1, 1, -19, 20, -21 },  /* SEg */
-  { -21, -1, -19, -20, 20, 19, 1, 21 },  /* WB */
-  { -21, 20, -19, 0, 0, 0, 0, 0 },  /* Dg*/
-  { -21, -19, 21, 19, 0, 0, 0, 0 },  /* BGn */
-  { -1, 1, 20, -20, 0, 0, 0, 0 },  /* RGn */
-  { -21, -20, -19, -1, 1, 19, 20, 21 },  /* GGn */
+   { -21, -20, -19, -1, 1, 19, 20, 21 },  /* pChariot Soldier */
+/* pfree_eagle, plion_hawk, pfire_demon, pvice_general, pgreat_general */
   { -21, -20, -19, -1, 1, 19, 20, 21 },  /* FEg */
   { -21, -19, 21, 19, 0, 0, 0, 0 },  /* LHk */
-  { -21, -19, 21, 19, 0, 0, 0, 0 },  /* VGn */
   { -21, -20, -19, 21, 20, 19, 0, 0 },  /* FiD */
-  { -21, -20, -19, -1,  1, 19, 20, 21 },  /* CP */
-  { -21, -20, -19, 21, 20, 19, 0, 0 },  /* FO */
-  { -21, -20, -19, -1,  1, 19, 20, 21 },  /* FS */
-  { -21, -1, -19, 21, 1, 19, 0, 0 },  /* FBo */
-  { -21, -1, -19, 21, 1, 19, 0, 0 },  /* HT */
-  { 21, -20, 19, 0, 0, 0, 0, 0 },  /* MGn */
-  { 21, -20, 19, -1,   1, 20,  0, 0 },  /* Tokin */
-  { -21, -20, -19, 20, 0, 0, 0, 0 },  /* W */
-  {  21, -20,  19, 20, 0, 0, 0, 0 },  /* WH */
-  { -21, -20, -19, -1, 1, 19, 20, 21 },  /* Free King */
-  { -1, 1, 20, -20, 0, 0, 0, 0 },  /* SM */
-  { -1, 1, 20, -20, 0, 0, 0, 0 },  /* SSd */
+  { -21, -19, 21, 19, 0, 0, 0, 0 },  /* VGn */
+  { -21, -20, -19, -1, 1, 19, 20, 21 }  /* GGn */
+ }, /* gote's pieces */
+ { { 20, 0, 0, 0, 0, 0, 0, 0 },       /* Pawn */
+   { -21, -20, -19, -1, 1, 19, 20, 21 },  /* King */
+   { -21, -19, -1, 1, 19, 20, 21, 0 },  /* Drunken Elephant */
+   {  21, 20, 19, 1, -1, -20, 0, 0 },  /* Gold */
+   { -21, -19, 19, 21, 20, 0, 0, 0 },   /* Silver */
+   {  21, 20, 19, -20, 0, 0, 0, 0 },  /* Copper */
+   {  21, 20, 19, 0, 0, 0, 0, 0 },  /* Iron */
+   { -21, -19, 19, 21, 20, -20, 0, 0 },   /* Ferocious Leopard */
+   {  41, 39, 0, 0, 0, 0, 0, 0 },     /* Knight */
+   {  20, 0, 0, 0, 0, 0, 0, 0 },       /* Lance */
+   { -20, 20, 0, 0, 0, 0, 0, 0 },       /* Reverse Chariot */
+   { -21, -20, -19, -1, 1, 19, 20, 21 },  /* Chariot Soldier */
+   { -21, -20, -19, -1, 21, 19, 1, 0 },  /* Blind Tiger */
+   { -21, -40, -19, -2, 21, 19, 2, 40 },  /* Kylin */
+   { -42, -20, -38, -1, 42, 38, 1, 20 },  /* Phoenix */
+   { -21, -20, -19, -1, 1, 19, 20, 21 },  /* Free King */
+   { -1, 1, 20, -20, 0, 0, 0, 0 },  /* SM */
+   { -1, 1, 20, -20, 0, 0, 0, 0 },  /* SSd */
+   { 20, -20, -1, 1, 0, 0, 0, 0 },  /* VM */
+   { 20, -20, 1, -1, 0, 0, 0, 0 },  /* VSd */
+   { -1, 1, 20, -20, 0, 0, 0, 0 },  /* Rook */
+   { 0, 0, 0, 0, 0, 0, 0, 0 }, /* Lion */
+   { -21, -19, 21, 19, 0, 0, 0, 0 },  /* B */
+   { -21, -19, 21, 19, 20, -20, -1, 1 },  /* DH */
+   { 20, -20, -1, 1, -21, -19, 21, 19 },  /* DK */
+   { -21, 20, -19, -1, 1, 19, -20, 21 },  /* HF */
+   { 21, -20, 19, -1, 1, -19, 20, -21 },  /* SEg */
+   { -21, -1, -19, -20, 20, 19, 1, 21 },  /* WB */
+   { -21, 20, -19, 0, 0, 0, 0, 0 },  /* Dg*/
+   { -21, -19, 21, 19, 0, 0, 0, 0 },  /* BGn */
+   { -1, 1, 20, -20, 0, 0, 0, 0 },  /* RGn */
+   { -21, -20, -19, -1, 1, 19, 20, 21 },  /* GGn */
+   { -21, -20, -19, -1, 1, 19, 20, 21 },  /* FEg */
+   { -21, -19, 21, 19, 0, 0, 0, 0 },  /* LHk */
+   { -21, -19, 21, 19, 0, 0, 0, 0 },  /* VGn */
+   { -21, -20, -19, 21, 20, 19, 0, 0 },  /* FiD */
+   { -21, -20, -19, -1,  1, 19, 20, 21 },  /* CP */
+   { -21, -20, -19, 21, 20, 19, 0, 0 },  /* FO */
+   { -21, -20, -19, -1,  1, 19, 20, 21 },  /* FS */
+   { -21, -1, -19, 21, 1, 19, 0, 0 },  /* FBo */
+   { -21, -1, -19, 21, 1, 19, 0, 0 },  /* HT */
+   { 21, -20, 19, 0, 0, 0, 0, 0 },  /* MGn */
+   { 21, -20, 19, -1,   1, 20,  0, 0 },  /* Tokin */
+   { -21, -20, -19, 20, 0, 0, 0, 0 },  /* W */
+   {  21, -20,  19, 20, 0, 0, 0, 0 },  /* WH */
+   { -21, -20, -19, -1, 1, 19, 20, 21 },  /* Free King */
+   { -1, 1, 20, -20, 0, 0, 0, 0 },  /* SM */
+   { -1, 1, 20, -20, 0, 0, 0, 0 },  /* SSd */
   { 20, -20,-1, 1, 0, 0, 0, 0 },  /* VM */
   { 20, -20, -1, 1, 0, 0 },  /* VSd */
   { -1, 1, 20, -20, 0, 0, 0, 0 },  /* Rook */
@@ -330,10 +348,16 @@ int offset[2][PIECE_TYPES][8] = {
   { 20, -20, -1, 1, -21, -19, 21, 19 },  /* DK */
   { -21, 20, -19, -1, 1, 19, -20, 21 },  /* HF */
   { 21, -20, 19, -1, 1, -19, 20, -21 },  /* SEg */
-  { -21, -1, -19, -20, 20, 19, 1, 21 },  /* WB */
-  { -21, -19, 21, 19, 0, 0, 0, 0 },  /* BGn */
-  { -1, 1, 20, -20, 0, 0, 0, 0 },  /* RGn */
-  { -21, -20, -19, -1, 1, 19, 20, 21 }  /* Chariot Soldier */
+   { -21, -1, -19, -20, 20, 19, 1, 21 },  /* WB */
+   { -21, -19, 21, 19, 0, 0, 0, 0 },  /* BGn */
+   { -1, 1, 20, -20, 0, 0, 0, 0 },  /* RGn */
+   { -21, -20, -19, -1, 1, 19, 20, 21 },  /* pChariot Soldier */
+/* pfree_eagle, plion_hawk, pfire_demon, pvice_general, pgreat_general */
+  { -21, -20, -19, -1, 1, 19, 20, 21 },  /* FEg */
+  { -21, -19, 21, 19, 0, 0, 0, 0 },  /* LHk */
+  { -21, -20, -19, 21, 20, 19, 0, 0 },  /* FiD */
+  { -21, -19, 21, 19, 0, 0, 0, 0 },  /* VGn */
+  { -21, -20, -19, -1, 1, 19, 20, 21 },  /* GGn */
 } };
 
 int can_promote_zone[2][PIECE_TYPES] = {
@@ -353,9 +377,22 @@ unsigned char *piece_string[PIECE_TYPES] = {
 	"DH ", "DK ", "HF ", "SEg", "WB ", "Dg ", "BGn", "RGn", "GGn", "FEg", "LHk", "VGn", "FiD",
 	"\e[31mCP\e[30m ", "\e[31mFO\e[30m ", "\e[31mFS\e[30m ", "\e[31mFBo\e[30m", "\e[31mHT\e[30m ", "\e[31mMGn\e[30m", "\e[31m+P\e[30m", " \e[31mW\e[30m ", "\e[31mWH\e[30m ", 
 	/* promoted and unpromoted */
-	 "\e[31mFK \e[30m", "\e[31mSM\e[30m ", "\e[31mssd\e[30m", "\e[31mVM\e[30m ", "\e[31mVSD\e[30m", " \e[31mr\e[30m ", "\e[31mLn \e[30m", " \e[31mb\e[30m ",
-	"\e[31mDH\e[30m ", "\e[31mDK\e[30m ", "\e[31mHF\e[30m ", "\e[31mSEg\e[30m", "wb ", "\e[31mBGn\e[30m", "\e[31mRGn\e[30m", "\e[31mChS\e[30m"
+	 "\e[31mFK \e[30m", "\e[31mSM\e[30m ", "\e[31mSSd\e[30m", "\e[31mVM\e[30m ", "\e[31mVSD\e[30m", " \e[31mR\e[30m ", "\e[31mLn \e[30m", " \e[31mB\e[30m ",
+	"\e[31mDH\e[30m ", "\e[31mDK\e[30m ", "\e[31mHF\e[30m ", "\e[31mSEg\e[30m", "\e[31mWB \e[0m", "\e[31mBGn\e[30m", "\e[31mRGn\e[30m", "\e[31mChS\e[30m",
+ "\e[31mFEg\e[30m", "\e[31mLHk\e[0m", "\e[31mFiD\e[30m", "\e[31mVGn\e[30m", "\e[31mGGn\e[30m",
 };
+
+unsigned char *unpadded_piece_string[PIECE_TYPES] = {
+	"P", "K", "DE", "G", "S", "C", "I", "FL", "N", "L", "RC", "ChS", "BT",
+	"Ky", "Ph", "FK", "SM", "SSd", "VM", "VSd", "R", "Ln", "B",
+	"DH", "DK", "HF", "SEg", "WB", "Dg", "BGn", "RGn", "GGn", "FEg", "LHk", "VGn", "FiD",
+	"\e[31mCP\e[30m", "\e[31mFO\e[30m", "\e[31mFS\e[30m", "\e[31mFBo\e[30m", "\e[31mHT\e[30m", "\e[31mMGn\e[30m", "\e[31m+P\e[30m", "\e[31mW\e[30m", "\e[31mWH\e[30m", 
+	/* promoted and unpromoted */
+	 "\e[31mFK\e[30m", "\e[31mSM\e[30m", "\e[31mSSd\e[30m", "\e[31mVM\e[30m", "\e[31mVSD\e[30m", "\e[31mR\e[30m", "\e[31mLn\e[30m", " \e[31mB\e[30m",
+	"\e[31mDH\e[30m", "\e[31mDK\e[30m", "\e[31mHF\e[30m", "\e[31mSEg\e[30m", "\e[31mWB\e[0m", "\e[31mBGn\e[30m", "\e[31mRGn\e[30m", "\e[31mChS\e[30m",
+ "\e[31mFEg\e[30m", "\e[31mLHk\e[30m", "\e[31mFiD\e[30m", "\e[31mVGn\e[30m", "\e[31mGGn\e[30m"
+};
+
 
 unsigned char *TeX_light_piece_string[PIECE_TYPES] = {
 	"Fuhyo", "Oosho", "Suizo", "Kinsho", "Ginsho", "Dosho", "Tessho", "Mohyo", "Keima", "Kyosha", "Hansha", "Shahei", "Moko",
@@ -364,7 +401,8 @@ unsigned char *TeX_light_piece_string[PIECE_TYPES] = {
 	"Red{Taishi}", "Red{Higyu}", "Red{Hiroku}", "Red{Honcho}", "Red{Shiteno}", "Red{Suisho}", "Red{Kinsho}", "Red{Keigei}", "Red{Hakku}", 
 	/* promoted and unpromoted */
 	 "Red{Hono}", "Red{Ogyo}", "\e[31mssd\e[30m", "\e[31mVM\e[30m ", "\e[31mVSD\e[30m", " \e[31mr\e[30m ", "\e[31mLn \e[30m", " \e[31mb\e[30m ",
-	"\e[31mDH\e[30m ", "\e[31mDK\e[30m ", "\e[31mHF\e[30m ", "\e[31mSEg\e[30m", "wb ", "\e[31mBGn\e[30m", "\e[31mRGn\e[30m", "\e[31mChS\e[30m"
+	"\e[31mDH\e[30m ", "\e[31mDK\e[30m ", "\e[31mHF\e[30m ", "\e[31mSEg\e[30m", "\e[31mWB\e[30m ", "\e[31mBGn\e[30m", "\e[31mRGn\e[30m", "\e[31mChS\e[30m",
+ "\e[31mFEg\e[30m", "\e[31mLHk\e[0m", "\e[31mFiD\e[30m", "\e[31mVGn\e[30m", "\e[31mGGn\e[30m"
 };
 
 unsigned char *TeX_dark_piece_string[PIECE_TYPES] = {
@@ -373,8 +411,9 @@ unsigned char *TeX_dark_piece_string[PIECE_TYPES] = {
 	"RYUME", "RYUO", "KAKUO", "HIJU", "SUIGYU", "INU", "KAKUSHO", "HISHO", "TAISHO", "HONJU", "SHIYO", "FUKUSHO", "KAKI",
 	"RED{TAISHI}", "RED{HIGYU}", "RED{HIROKU}", "RED{HONCHO}", "RED{SHITENO}", "RED{SUISHO}", "RED{KINSHO}", "RED{KEIGEI}", "RED{HAKKU}", 
 	/* promoted and unpromoted */
-	 "RED{HONO}", "RED{OGYO}", "\e[31mssd\e[30m", "\e[31mVM\e[30m ", "\e[31mVSD\e[30m", " \e[31mr\e[30m ", "\e[31mLn \e[30m", " \e[31mb\e[30m ",
-	"\e[31mDH\e[30m ", "\e[31mDK\e[30m ", "\e[31mHF\e[30m ", "\e[31mSEg\e[30m", "wb ", "\e[31mBGn\e[30m", "\e[31mRGn\e[30m", "\e[31mChS\e[30m"
+	 "RED{HONO}", "RED{OGYO}", "RED{ssd}", "\e[31mVM\e[30m ", "\e[31mVSD\e[30m", " \e[31mr\e[30m ", "\e[31mLn \e[30m", " \e[31mb\e[30m ",
+	"\e[31mDH\e[30m ", "\e[31mDK\e[30m ", "\e[31mHF\e[30m ", "\e[31mSEg\e[30m", "wb ", "\e[31mBGn\e[30m", "\e[31mRGn\e[30m", "\e[31mChS\e[30m",
+ "\e[31mFEg\e[30m", "\e[31mLHk\e[0m", "\e[31mFiD\e[30m", "\e[31mVGn\e[30m", "\e[31mGGn\e[30m"
 };
 
 unsigned char *kanji_piece_string[PIECE_TYPES] = {
@@ -384,7 +423,8 @@ unsigned char *kanji_piece_string[PIECE_TYPES] = {
 	" \e[31m子\e[30m", " \e[31m牛\e[30m", " \e[31m鹿\e[30m", " \e[31m猪\e[30m", " \e[31m天\e[0m", " \e[31m雜\e[30m", " \e[31m金\e[30m", " \e[31m鯨\e[30m", " \e[31m駒\e[30m", 
 	/* promoted and unpromoted */
 	 " \e[31m奔\e[30m", "\e[31m横\e[30m", "\e[31m横!\e[30m", "\e[31m竪\e[30m ", "\e[31m竪!\e[30m", " \e[31m飛\e[30m ", " \e[31m獅\e[30m", " \e[31m角\e[30m",
-	" \e[31m馬\e[30m", " \e[31m龍\e[30m", " \e[31m鷹\e[30m", " \e[31m鷲\e[30m", " \e[31m水\e[30m", "\e[31m角!\e[30m", "\e[31m飛!\e[30m", " \e[31m車\e[30m"
+	" \e[31m馬\e[30m", " \e[31m龍\e[30m", " \e[31m鷹\e[30m", " \e[31m鷲\e[30m", " \e[31m水\e[30m", "\e[31m角!\e[30m", "\e[31m飛!\e[30m", " \e[31m車\e[30m",
+ "\e[31mFEg\e[30m", "\e[31mLHk\e[0m", "\e[31mFiD\e[30m", "\e[31mVGn\e[30m", "\e[31mGGn\e[30m",
 };
 
 unsigned char *upper_kanji_string[PIECE_TYPES] = {
@@ -394,7 +434,8 @@ unsigned char *upper_kanji_string[PIECE_TYPES] = {
 	"\e[31m太\e[30m", "\e[31m飛\e[30m", "\e[31m飛\e[30m", "\e[31m奔\e[30m", "\e[31m四\e[0m", "\e[31m雜\e[30m", "\e[31m金\e[30m", "\e[31m鯨\e[30m", "\e[31m白\e[30m", 
 	/* promoted and unpromoted */
 	 "\e[31m奔\e[30m", "\e[31m横\e[30m", "\e[31m横\e[30m", "\e[31m竪\e[30m", "\e[31m竪\e[30m", "\e[31m飛\e[30m ", "\e[31m獅\e[30m", "\e[31m角\e[30m",
-	"\e[31m龍\e[30m", "\e[31m龍\e[30m", "\e[31m角\e[30m", "\e[31m飛\e[30m", "\e[31m水\e[30m", "\e[31m角!\e[30m", "\e[31m飛!\e[30m", "\e[31m車\e[30m"
+	"\e[31m龍\e[30m", "\e[31m龍\e[30m", "\e[31m角\e[30m", "\e[31m飛\e[30m", "\e[31m水\e[30m", "\e[31m角!\e[30m", "\e[31m飛!\e[30m", "\e[31m車\e[30m",
+ "\e[31mFEg\e[30m", "\e[31mLHk\e[0m", "\e[31mFiD\e[30m", "\e[31mVGn\e[30m", "\e[31mGGn\e[30m",
 };
 
 unsigned char *lower_kanji_string[PIECE_TYPES] = {
@@ -404,7 +445,8 @@ unsigned char *lower_kanji_string[PIECE_TYPES] = {
 	"\e[31m子\e[30m", "\e[31m牛\e[30m", "\e[31m鹿\e[30m", "\e[31m猪\e[30m", "\e[31m天\e[0m", "\e[31m将\e[30m", "\e[31m将\e[30m", "\e[31m鯢\e[30m", "\e[31m駒\e[30m", 
 	/* promoted and unpromoted */
 	 "\e[31m王\e[30m", "\e[31m行\e[30m", "\e[31m兵\e[30m", "\e[31m行\e[30m", "\e[31m兵\e[30m", "\e[31m車\e[30m ", "\e[31m子\e[30m", "\e[31m行\e[30m",
-	" \e[31m馬\e[30m", "\e[31m王\e[30m", "\e[31m鷹\e[30m", "\e[31m鷲\e[30m", "\e[31m牛\e[30m", "\e[31m将\e[30m", "\e[31m将\e[30m", "\e[31m兵\e[30m"
+	" \e[31m馬\e[30m", "\e[31m王\e[30m", "\e[31m鷹\e[30m", "\e[31m鷲\e[30m", "\e[31m牛\e[30m", "\e[31m将\e[30m", "\e[31m将\e[30m", "\e[31m兵\e[30m",
+ "\e[31mFEg\e[30m", "\e[31mLHk\e[0m", "\e[31mFiD\e[30m", "\e[31mVGn\e[30m", "\e[31mGGn\e[30m"
 };
 
 char *color_string[6] = {
@@ -427,41 +469,41 @@ char *inf_color[5] = {
 
 /* the initial board state */
 
-int init_color[NUMSQUARES] = {
+int init_boardcolor[NUMSQUARES] = {
 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 61, 1, 1, 61, 1, 1, 1, 1, 1, 1, 61, 1, 1, 61, 1,
+	1, 66, 1, 1, 66, 1, 1, 1, 1, 1, 1, 66, 1, 1, 66, 1,
 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 	1, 1, 1, 1, 1, 1, 1, 1,	1, 1, 1, 1, 1, 1, 1, 1,
-	61, 61, 61, 61, 1, 61, 61, 61, 61, 61, 61, 1, 61, 61, 61, 61,
-	61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61,
-	61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61,
-	61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61,
-	61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61,
-	61, 61, 61, 61, 0, 61, 61, 61, 61, 61, 61, 0, 61, 61, 61, 61,
+	66, 66, 66, 66, 1, 66, 66, 66, 66, 66, 66, 1, 66, 66, 66, 66,
+	66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+	66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+	66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+	66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+	66, 66, 66, 66, 0, 66, 66, 66, 66, 66, 66, 0, 66, 66, 66, 66,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 61, 0, 0, 61, 0, 0, 0, 0, 0, 0, 61, 0, 0, 61, 0,
+	0, 66, 0, 0, 66, 0, 0, 0, 0, 0, 0, 66, 0, 0, 66, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
 int init_piece[NUMSQUARES] = {
 	9, 8, 7, 6, 5, 4, 3, 2, 1, 3, 4, 5, 6, 7, 8, 9,
-	10, 61, 11, 11, 61, 12, 14, 15, 21, 13, 12, 61, 11, 11, 61, 10,
+	10, 66, 11, 11, 66, 12, 14, 15, 21, 13, 12, 66, 11, 11, 66, 10,
 	17, 19, 22, 23, 24, 27, 35, 32, 33, 35, 27, 24, 23, 22, 19, 17,
 	16, 18, 20, 25, 26, 29, 30, 34, 31, 30, 29, 26, 25, 20, 18, 16,
 	0, 0, 0, 0, 0, 0, 0, 0,	0, 0, 0, 0, 0, 0, 0, 0,
-	61, 61, 61, 61, 28, 61, 61, 61, 61, 61, 61, 28, 61, 61, 61, 61,
-	61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61,
-	61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61,
-	61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61,
-	61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61,
-	61, 61, 61, 61, 28, 61, 61, 61, 61, 61, 61, 28, 61, 61, 61, 61,
+	66, 66, 66, 66, 28, 66, 66, 66, 66, 66, 66, 28, 66, 66, 66, 66,
+	66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+	66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+	66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+	66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+	66, 66, 66, 66, 28, 66, 66, 66, 66, 66, 66, 28, 66, 66, 66, 66,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 	16, 18, 20, 25, 26, 29, 30, 31, 34, 30, 29, 26, 25, 20, 18, 16,
 	17, 19, 22, 23, 24, 27, 35, 33, 32, 35, 27, 24, 23, 22, 19, 17,
-	10, 61, 11, 11, 61, 12, 13, 21, 15, 14, 12, 61, 11, 11, 61, 10,
+	10, 66, 11, 11, 66, 12, 13, 21, 15, 14, 12, 66, 11, 11, 66, 10,
 	9, 8, 7, 6, 5, 4, 3, 1, 2, 3, 4, 5, 6, 7, 8, 9
 };
 
@@ -478,6 +520,8 @@ int depth_adj[PIECE_TYPES] = {
   200, 200, 200,
   200, 200, 200,
   /* promoted and unpromoted (hardly likely) */
+  200, 200, 200,
+  200, 200, 200,
   200, 200, 200,
   200, 200, 200,
   200, 200, 200,
@@ -504,8 +548,10 @@ int depth_adj[PIECE_TYPES] = {
   100, 100, 100,
   100, 100, 100,
   100, 100, 100,
+  100, 100, 100,
+  100, 100, 100,
   100, 100,
-  100, 100, 100
+  100, 100, 100,
 };
 */
 
@@ -528,7 +574,11 @@ unsigned char *piece_name[PIECE_TYPES+1] = {
   "Lion (+Ky)", "Bishop (+FL)",
   "Dragon Horse (+B)", "Dragon King (+R)", "Horned Falcon (+DH)",
   "Soaring Eagle (+DK)", "Water Buffalo (+SSd) ", 
-  "Bishop General (+HF)", "Rook General (+SEg)", "Chariot Soldier (+VSd)", "(empty) "
+  "Bishop General (+HF)", "Rook General (+SEg)", "Chariot Soldier (+VSd)", 
+/* pfree_eagle, plion_hawk, pfire_demon, pvice_general, pgreat_general */
+  "Free Eagle (+FK)", "Lion Hawk (+Ln)", "Fire Demon (+WB)",
+  "Vice General (+BGn)", "Great General (+RGn)",
+  "(empty) "
 };
 
 #endif

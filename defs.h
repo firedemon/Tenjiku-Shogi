@@ -183,9 +183,7 @@ typedef struct {
   unsigned char to;
   unsigned char promote;
   unsigned char bits;
-  unsigned char align1;
-  /*  unsigned char align2;
-      unsigned char align3; */
+  unsigned char burned_pieces; /* no of pieces burnt */
   int oldpiece;
 
 } move_bytes;
@@ -215,6 +213,7 @@ typedef struct {
 } hist_t;
 
 extern int computer_side;
+extern int network_side;
 
 extern int piece_value[PIECE_TYPES+1];
 
@@ -253,6 +252,12 @@ extern BOOL kanji;
 
 extern BOOL fullkanji;
 /* TRUE if full kanji output on terminal, FALSE for ASCII or kanji */
+
+extern BOOL full_captures;
+/* TRUE if all captures shown on terminal, FALSE for diff list */
+
+extern BOOL networked_game;
+/* TRUE if opponent over the network (not yet working) */
 
 extern int depth_adj[PIECE_TYPES];
 

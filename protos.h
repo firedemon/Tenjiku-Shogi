@@ -48,6 +48,7 @@ BOOL can_promote(int i, int n);
 BOOL must_promote(int i, int n);
 BOOL higher(int i, int j);
 BOOL suicide(int i);
+int demote(int this);
 
 /* search.c */
 void think(BOOL quiet);
@@ -78,6 +79,9 @@ void curses_full_kanji_print_board();
 void ascii_print_board( FILE *fd );
 void kanji_print_board( FILE *fd );
 void full_kanji_print_board( FILE *fd );
+
+void print_full_captures();
+void print_diff_captures();
 
 void xboard();
 #ifdef EZ

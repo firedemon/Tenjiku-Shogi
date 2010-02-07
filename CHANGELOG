@@ -1,5 +1,18 @@
 --------------------- CHANGELOG ----------------------
 Latest changes:
+2010.02.07
+- fixed kifu to show the last 30 moves, not the first 30
+- added burning counter to FiD moves
+- finished TeX strings for export
+- fixed kanji strings for promoted pieces
+- added kifu for kanji and fullkanji modes
+
+2010.02.06
+- keeping track of captures improved (needs to be added to kanji and fullkanji)
+- several small bugs fixed
+- introduced "diff" to switch between all captures and diff list
+- added suicide indicator '*' to move_str
+
 2010.02.01
 - first hack at keeping track of captures
 - improved ascii board, also for var_boards

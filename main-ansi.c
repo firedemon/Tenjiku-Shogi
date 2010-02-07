@@ -7,7 +7,7 @@
  *	Copyright 1997 Tom Kerrigan
  */
 
-unsigned char tenjiku_version[] = { "0.55" };
+unsigned char tenjiku_version[] = { "0.60" };
 /* #define DEBUG
  */
 #include <stdio.h>
@@ -19,7 +19,7 @@ unsigned char tenjiku_version[] = { "0.55" };
 #include "protos.h"
 
 unsigned char *side_name[2] = { "Sente", "Gote" };
-int computer_side;
+int computer_side, network_side;
 char TeXoutputpath[1024] = "exports";
 char savegamepath[1024] = "savegames";
 char positionpath[1024] = "positions";
@@ -44,7 +44,11 @@ BOOL kanji = TRUE; /* kanji output for terminal */
    January 1, 1970. */
 BOOL fullkanji = FALSE;
 
+BOOL full_captures = FALSE;
+
 BOOL loaded_position = FALSE; /*necessary to provide information to save_game - not yet implemented */
+
+BOOL networked_game = FALSE;
 
 #include <sys/timeb.h>
 
@@ -98,6 +102,7 @@ int main(int argc,  char **argv)
 	char last_move[15], before_last_move[1024], last_move_buf[128]; /* to prevent overflowing from nonsense */
 	BOOL found, promote, found_in_book;
 
+
 	printf("\n");
 	printf("Tenjiku Shogi %s by E.Werner\n", tenjiku_version);
 	printf("   derived from\n");
@@ -111,6 +116,7 @@ int main(int argc,  char **argv)
 	book = book_init();
 	gen();
 	computer_side = EMPTY;
+	network_side = EMPTY;
 	max_time = 1000000;
 	read_init_file();
 	process_arguments(argc, argv);
@@ -158,7 +164,9 @@ int main(int argc,  char **argv)
 			    break;
 			  }
 			} 
-		      } else {
+		      } else if ( networked_game && (side == network_side )) {
+			; /* wait for incoming move */
+		      } else  {
 			promote = FALSE;
 			if ( 6 == sscanf(last_move_buf,"%d%c%c%d%c%c",&from_file, &from_rank, &igui,
 					 &to_file, &to_rank, &prom) ) 
@@ -272,6 +280,14 @@ int main(int argc,  char **argv)
 		  setup_board();
 		  print_board( stdout );
 		  fflush(stdout);
+		  continue;
+		}
+		if (!strcmp(s, "diff")) {
+		  if ( full_captures )
+		    full_captures = FALSE;
+		  else
+		    full_captures = TRUE;
+		  print_board( stdout );
 		  continue;
 		}
 		if (!strcmp(s, "ascii")) {
@@ -521,6 +537,7 @@ int main(int argc,  char **argv)
 			printf("hypo - m(oves) shows hypothetical moves, too\n");
 			printf("nohypo - m(oves) doesn't show hypothetical moves\n");
 			printf("i(nf) - ask for a square and shows pieces that can move there\n");
+			printf("diff - toggle all captures or diff list\n");
 			/* printf("check - shows possible checks\n"); */
 			printf("u(ndo) - takes back a move\n");
 			printf("r(edo) - puts back a move\n");
@@ -654,6 +671,10 @@ unsigned char *ascii_move_str(move_bytes m)
 {
   static unsigned char str[25];
   char igui, igui2 = '-';
+  char burn_self = '*';
+  
+  if (!(m.bits & 2 ) )
+    burn_self = ' ';
 
   if (m.bits & 32) /* igui move */
     igui = '!';
@@ -662,7 +683,7 @@ unsigned char *ascii_move_str(move_bytes m)
     else igui = '-';
   if (m.bits & 4) { /* lion double move */
     if (m.bits & 16)  /* promotion */
-      sprintf(str, "%s%d%c%c%d%c%c%d%c+", unpadded_piece_string[m.oldpiece],
+      sprintf(str, "%s%d%c%c%d%c%c%d%c+%c", unpadded_piece_string[m.oldpiece],
 	      16 - GetFile(m.from),
 	      GetRank(m.from) + 'a',
 	      igui,
@@ -670,9 +691,9 @@ unsigned char *ascii_move_str(move_bytes m)
 	      GetRank(m.over) + 'a',
 	      igui2,
 	      16 - GetFile(m.to),
-	      GetRank(m.to) + 'a');
+	      GetRank(m.to) + 'a',burn_self);
     else  
-      sprintf(str, "%s%d%c%c%d%c%c%d%c", unpadded_piece_string[m.oldpiece],
+      sprintf(str, "%s%d%c%c%d%c%c%d%c%c", unpadded_piece_string[m.oldpiece],
 	      16 - GetFile(m.from),
 	      GetRank(m.from) + 'a',
 	      igui,
@@ -680,23 +701,32 @@ unsigned char *ascii_move_str(move_bytes m)
 	      GetRank(m.over) + 'a',
 	      igui2,
 	      16 - GetFile(m.to),
-	      GetRank(m.to) + 'a');
-  } else {
-    if (m.bits & 16)  /* promotion */
-      sprintf(str, "%s%d%c%c%d%c+",  unpadded_piece_string[m.oldpiece],
+	      GetRank(m.to) + 'a',burn_self);
+  } else { /* FiD will go here */
+    if (m.bits & 16)  { /* promotion, it's not an FiD */
+      sprintf(str, "%s%d%c%c%d%c+%c",  unpadded_piece_string[m.oldpiece],
 	      16 - GetFile(m.from),
 	      GetRank(m.from) + 'a',
 	      igui,
 	      16 - GetFile(m.to),
-	      GetRank(m.to) + 'a');
-    else
-    sprintf(str, "%s%d%c%c%d%c",  unpadded_piece_string[m.oldpiece],
-	    16 - GetFile(m.from),
-	    GetRank(m.from) + 'a',
-	    igui,
-	    16 - GetFile(m.to),
-	    GetRank(m.to) + 'a');
-
+	      GetRank(m.to) + 'a', burn_self);
+    } else {
+      if ( m.burned_pieces == '0' ) {
+	sprintf(str, "%s%d%c%c%d%c%c",  unpadded_piece_string[m.oldpiece],
+		16 - GetFile(m.from),
+		GetRank(m.from) + 'a',
+		igui,
+		16 - GetFile(m.to),
+		GetRank(m.to) + 'a',burn_self);
+      } else { /* cannot be a suicide move, unless hodges */
+	sprintf(str, "%s%d%c%c%d%c!%c",  unpadded_piece_string[m.oldpiece],
+		16 - GetFile(m.from),
+		GetRank(m.from) + 'a',
+		igui,
+		16 - GetFile(m.to),
+		GetRank(m.to) + 'a',m.burned_pieces);
+      }
+    }
   }
   return str;
 }
@@ -705,6 +735,10 @@ unsigned char *kanji_move_str(move_bytes m)
 {
   static unsigned char str[25];
   char igui, igui2 = '-';
+  char burn_self = '*';
+  
+  if ( !(m.bits & 2 ) )
+    burn_self = ' ';
 
   if (m.bits & 32) /* igui move */
     igui = '!';
@@ -713,7 +747,7 @@ unsigned char *kanji_move_str(move_bytes m)
     else igui = '-';
   if (m.bits & 4) { /* lion double move */
     if (m.bits & 16)  /* promotion */
-      sprintf(str, "%s%d%c%c%d%c%c%d%c+", kanji_piece_string[m.oldpiece],
+      sprintf(str, "%s%d%c%c%d%c%c%d%c+%c", kanji_piece_string[m.oldpiece],
 	      16 - GetFile(m.from),
 	      GetRank(m.from) + 'a',
 	      igui,
@@ -721,7 +755,7 @@ unsigned char *kanji_move_str(move_bytes m)
 	      GetRank(m.over) + 'a',
 	      igui2,
 	      16 - GetFile(m.to),
-	      GetRank(m.to) + 'a');
+	      GetRank(m.to) + 'a', burn_self);
     else  
       sprintf(str, "%s%d%c%c%d%c%c%d%c", kanji_piece_string[m.oldpiece],
 	      16 - GetFile(m.from),
@@ -731,23 +765,32 @@ unsigned char *kanji_move_str(move_bytes m)
 	      GetRank(m.over) + 'a',
 	      igui2,
 	      16 - GetFile(m.to),
-	      GetRank(m.to) + 'a');
+	      GetRank(m.to) + 'a',burn_self);
   } else {
-    if (m.bits & 16)  /* promotion */
-      sprintf(str, "%s%d%c%c%d%c+",  kanji_piece_string[m.oldpiece],
+    if (m.bits & 16)  { /* promotion, it's not an FiD */
+      sprintf(str, "%s%d%c%c%d%c+%c",  kanji_piece_string[m.oldpiece],
 	      16 - GetFile(m.from),
 	      GetRank(m.from) + 'a',
 	      igui,
 	      16 - GetFile(m.to),
-	      GetRank(m.to) + 'a');
-    else
-    sprintf(str, "%s%d%c%c%d%c",  kanji_piece_string[m.oldpiece],
-	    16 - GetFile(m.from),
-	    GetRank(m.from) + 'a',
-	    igui,
-	    16 - GetFile(m.to),
-	    GetRank(m.to) + 'a');
-
+	      GetRank(m.to) + 'a', burn_self);
+    } else {
+      if ( m.burned_pieces == '0' ) {
+	sprintf(str, "%s%d%c%c%d%c%c",  kanji_piece_string[m.oldpiece],
+		16 - GetFile(m.from),
+		GetRank(m.from) + 'a',
+		igui,
+		16 - GetFile(m.to),
+		GetRank(m.to) + 'a',burn_self);
+      } else { /* cannot be a suicide move, unless hodges */
+	sprintf(str, "%s%d%c%c%d%c!%c",  kanji_piece_string[m.oldpiece],
+		16 - GetFile(m.from),
+		GetRank(m.from) + 'a',
+		igui,
+		16 - GetFile(m.to),
+		GetRank(m.to) + 'a',m.burned_pieces);
+      }
+    }
   }
   return str;
 }
@@ -756,7 +799,10 @@ unsigned char *fullkanji_move_str(move_bytes m)
 {
   static unsigned char str[25];
   char igui, igui2 = '-';
-
+  char burn_self = '*';
+  
+  if ( !(m.bits & 2 ) )
+    burn_self = ' ';
 
   if (m.bits & 32) /* igui move */
     igui = '!';
@@ -765,7 +811,7 @@ unsigned char *fullkanji_move_str(move_bytes m)
     else igui = '-';
   if (m.bits & 4) { /* lion double move */
     if (m.bits & 16)  /* promotion */
-      sprintf(str, "%s%s%d%c%c%d%c%c%d%c+", upper_kanji_string[m.oldpiece],  
+      sprintf(str, "%s%s%d%c%c%d%c%c%d%c+%c", upper_kanji_string[m.oldpiece],  
 	      lower_kanji_string[m.oldpiece],
 	      16 - GetFile(m.from),
 	      GetRank(m.from) + 'a',
@@ -774,9 +820,9 @@ unsigned char *fullkanji_move_str(move_bytes m)
 	      GetRank(m.over) + 'a',
 	      igui2,
 	      16 - GetFile(m.to),
-	      GetRank(m.to) + 'a');
+	      GetRank(m.to) + 'a',burn_self);
     else  
-      sprintf(str, "%s%s%d%c%c%d%c%c%d%c", upper_kanji_string[m.oldpiece],
+      sprintf(str, "%s%s%d%c%c%d%c%c%d%c%c", upper_kanji_string[m.oldpiece],
 	      lower_kanji_string[m.oldpiece],
 	      16 - GetFile(m.from),
 	      GetRank(m.from) + 'a',
@@ -785,25 +831,35 @@ unsigned char *fullkanji_move_str(move_bytes m)
 	      GetRank(m.over) + 'a',
 	      igui2,
 	      16 - GetFile(m.to),
-	      GetRank(m.to) + 'a');
+	      GetRank(m.to) + 'a',burn_self);
   } else {
-    if (m.bits & 16)  /* promotion */
-      sprintf(str, "%s%s%d%c%c%d%c+",  upper_kanji_string[m.oldpiece],
+    if (m.bits & 16)  { /* promotion */
+      sprintf(str, "%s%s%d%c%c%d%c+%c",  upper_kanji_string[m.oldpiece],
 	      lower_kanji_string[m.oldpiece],
 	      16 - GetFile(m.from),
 	      GetRank(m.from) + 'a',
 	      igui,
 	      16 - GetFile(m.to),
-	      GetRank(m.to) + 'a');
-    else
-    sprintf(str, "%s%s%d%c%c%d%c",  upper_kanji_string[m.oldpiece],
-	      lower_kanji_string[m.oldpiece],
-	    16 - GetFile(m.from),
-	    GetRank(m.from) + 'a',
-	    igui,
-	    16 - GetFile(m.to),
-	    GetRank(m.to) + 'a');
-
+	      GetRank(m.to) + 'a',burn_self);
+    } else {
+      if ( m.burned_pieces == '0' ) {
+	sprintf(str, "%s%s%d%c%c%d%c%c",  upper_kanji_string[m.oldpiece],
+		lower_kanji_string[m.oldpiece],
+		16 - GetFile(m.from),
+		GetRank(m.from) + 'a',
+		igui,
+		16 - GetFile(m.to),
+		GetRank(m.to) + 'a',burn_self);
+      } else { /* cannot be a suicide move, unless hodges */
+	sprintf(str, "%s%s%d%c%c%d%c!%c",  upper_kanji_string[m.oldpiece],
+		lower_kanji_string[m.oldpiece],
+		16 - GetFile(m.from),
+		GetRank(m.from) + 'a',
+		igui,
+		16 - GetFile(m.to),
+		GetRank(m.to) + 'a',m.burned_pieces);
+      }
+    }
   }
   return str;
 }
@@ -881,7 +937,6 @@ unsigned char *half_move_str(move_bytes m)
 /* print_board prints the board */
 
 void print_board( FILE *fd ) {
-  int i;
   if ( fullkanji )
     full_kanji_print_board( fd );
   else if ( kanji ) {
@@ -889,20 +944,93 @@ void print_board( FILE *fd ) {
   } else {
     ascii_print_board( fd );
   }
-  printf("Captured: Sente: ");
-  for ( i = 0; i < PIECE_TYPES; i++ ) 
-    if (captured[LIGHT][i])
-      printf("%s, ", piece_string[i]);
-  printf("\n          Gote: ");
-  for ( i = 0; i < PIECE_TYPES; i++ ) 
-    if (captured[DARK][i])
-      printf("%s, ", piece_string[i]);
-  printf("\n");
+  if ( full_captures ) {
+    print_full_captures();
+  } else {
+    print_diff_captures();
+  }
   if ( lost( side )) {
     fprintf( stdout, "You have lost the game!\n");
   } else if ( in_check( side )) {
     fprintf( stdout, "You're in CHECK!\n");
   }
+}
+
+
+void print_full_captures( void ) {
+  int i;
+  printf("Captured (all): Sente: ");
+  for ( i = 0; i < PIECE_TYPES; i++ ) 
+    if (captured[LIGHT][i])
+      if ( captured[LIGHT][i] == 1 ) {
+	if ( kanji || fullkanji ) 
+	  printf("%s%s, ", upper_kanji_string[i], lower_kanji_string[i]);
+	else
+	  printf("%s, ", piece_string[i]);
+      } else {
+	if ( kanji || fullkanji ) 
+	  printf("%s%s(%d), ", upper_kanji_string[i], lower_kanji_string[i],captured[LIGHT][i]);
+	else
+	  printf("%s(%d), ", piece_string[i],captured[LIGHT][i]);
+      }
+  printf("\n          Gote: ");
+  for ( i = 0; i < PIECE_TYPES; i++ ) 
+    if (captured[DARK][i])
+      if ( captured[DARK][i] == 1 ) {
+	if ( kanji || fullkanji ) 
+	  printf("%s%s, ", upper_kanji_string[i], lower_kanji_string[i]);
+	else
+	  printf("%s, ", piece_string[i]);
+      } else {
+	if ( kanji || fullkanji ) 
+	  printf("%s%s(%d), ", upper_kanji_string[i], lower_kanji_string[i],captured[DARK][i]);
+	else
+	  printf("%s(%d), ", piece_string[i],captured[DARK][i]);
+      }
+   printf("\n");
+}
+
+
+void print_diff_captures( void ) { /* generates a diff list for printing captures */
+  int diff_captures[2][PIECE_TYPES];
+  int i;
+  for ( i = 0; i < PIECE_TYPES; i++ ) {
+    diff_captures[0][i] = captured[0][i];
+    diff_captures[1][i] = captured[1][i];
+    while ( diff_captures[0][i] && diff_captures[1][i] ) {
+      diff_captures[0][i]--;
+      diff_captures[1][i]--;
+    }
+  }
+  printf("Captured (diff): Sente: ");
+  for ( i = 0; i < PIECE_TYPES; i++ ) 
+    if (diff_captures[LIGHT][i])
+      if ( diff_captures[LIGHT][i] == 1 ) {
+	if ( kanji || fullkanji ) 
+	  printf("%s%s, ", upper_kanji_string[i], lower_kanji_string[i]);
+	else
+	  printf("%s, ", piece_string[i]);
+      } else {
+	if ( kanji || fullkanji ) 
+	  printf("%s%s(%d), ", upper_kanji_string[i], lower_kanji_string[i],diff_captures[LIGHT][i]);
+	else
+	  printf("%s(%d), ", piece_string[i],diff_captures[LIGHT][i]);
+      }
+  printf("\n          Gote: ");
+  for ( i = 0; i < PIECE_TYPES; i++ ) 
+    if (diff_captures[DARK][i])
+      if ( diff_captures[DARK][i] == 1 ) {
+	if ( kanji || fullkanji ) 
+	  printf("%s%s, ", upper_kanji_string[i], lower_kanji_string[i]);
+	else
+	  printf("%s, ", piece_string[i]);
+      } else {
+	if ( kanji || fullkanji ) 
+	  printf("%s%s(%d), ", upper_kanji_string[i], lower_kanji_string[i],diff_captures[DARK][i]);
+	else
+	  printf("%s(%d), ", piece_string[i],diff_captures[DARK][i]);
+      }
+   printf("\n");
 }
 
 
@@ -913,6 +1041,10 @@ void ascii_print_board( FILE *fd )
   int from_square, to_square; /* last move */
   int next_from, next_to; /* next move */
   /* get the last move, should be in undo_dat[undos] */
+
+  if ( undos > 30 ) 
+    j = undos - 30;
+
   if ( undos ) {
     from_square = undo_dat[undos-1].m.b.from;
     to_square = undo_dat[undos-1].m.b.to;
@@ -1011,10 +1143,15 @@ void ascii_print_board( FILE *fd )
 void kanji_print_board( FILE *fd )
 {
   
-  int i;
+  int i, j =  1;
   int from_square, to_square; /* last move */
   int next_from, next_to; /* next move */
   /* get the last move, should be in undo_dat[undos] */
+
+  if ( undos > 30 ) 
+    j = undos - 30;
+
+
   if ( undos ) {
     from_square = undo_dat[undos-1].m.b.from;
     to_square = undo_dat[undos-1].m.b.to;
@@ -1074,42 +1211,36 @@ void kanji_print_board( FILE *fd )
       }
       break;
     }
-    if ((i + 1) % RANKS == 0 && i != LASTSQUARE)
-      fprintf( fd,"║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
+    if ((i + 1) % RANKS == 0 && i != LASTSQUARE) {
+      if ( annotate && undos && (j <= undos )) {
+	fprintf( fd,"║ %c   %d. %s\n", 'a' + GetRank(i), j, move_str(undo_dat[j-1].m.b));
+	j++;
+	if ( j <=undos ) {
+	  fprintf( fd,"  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢     %d. %s \n%c ", j, move_str(undo_dat[j-1].m.b), 'b' + GetRank(i)); 
+	  j++;
+	} else {
+	  fprintf( fd,"║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
+	}
+      } else {
+	fprintf( fd,"║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
+      }
     }
+  }
   fprintf( fd,"║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
 
-  if ( undos ) {
-    if ( undo_dat[undos-1].m.b.over != EMPTY ) {
-      fprintf( fd,"%s to move (last move %d: %s from %d%c over %d%c to %d%c)\n", 
-	       side_name[side],undos, kanji_piece_string[undo_dat[undos-1].oldpiece],
-	       16 - GetFile(undo_dat[undos-1].m.b.from), undo_dat[undos-1].m.b.from/16 + 'a', 
-	       16 - GetFile(undo_dat[undos-1].m.b.over),  undo_dat[undos-1].m.b.over/16 + 'a', 
-	       16 - GetFile(undo_dat[undos-1].m.b.to), undo_dat[undos-1].m.b.to/16 + 'a');
-    } else {      
-      fprintf( fd,"%s to move (last move %d: %s from %d%c to %d%c)\n", 
-	       side_name[side],undos, kanji_piece_string[undo_dat[undos-1].oldpiece],
-	       16 - GetFile(undo_dat[undos-1].m.b.from), GetRank(undo_dat[undos-1].m.b.from) + 'a', 
-	       16 - GetFile(undo_dat[undos-1].m.b.to),  GetRank(undo_dat[undos-1].m.b.to) + 'a');
-    }
+  if ( undos ) { 
+    fprintf( fd, "%s to move (last move: %d. %s)\n",
+	     side_name[side], undos, move_str(undo_dat[undos-1].m.b));
   } else {
     fprintf( fd,"%s to move\n", 
 	     side_name[side]);
   }
 
   if ( redos ) {
-    if ( redo_dat[redos-1].m.b.over != EMPTY ) {
-      fprintf( fd,"\t(next move %d: %s from %d%c over %d%c to %d%c)", 
-	       undos+1, kanji_piece_string[redo_dat[redos-1].oldpiece],
-	       16 - GetFile(redo_dat[redos-1].m.b.from), redo_dat[redos-1].m.b.from/16 + 'a', 
-	       16 - GetFile(redo_dat[redos-1].m.b.over),  redo_dat[redos-1].m.b.over/16 + 'a', 
-	       16 - GetFile(redo_dat[redos-1].m.b.to), redo_dat[redos-1].m.b.to/16 + 'a');
-    } else {      
-      fprintf( fd,"\t(next move %d: %s from %d%c to %d%c)", 
-	       undos+1, kanji_piece_string[redo_dat[redos-1].oldpiece],
-	       16 - GetFile(redo_dat[redos-1].m.b.from), GetRank(redo_dat[redos-1].m.b.from) + 'a', 
-	       16 - GetFile(redo_dat[redos-1].m.b.to),  GetRank(redo_dat[redos-1].m.b.to) + 'a');
-    }
+   fprintf( fd, "(next move: %d. %s)\n",
+	      undos+1, move_str(redo_dat[redos-1].m.b));
+  } else {
+    fprintf( fd, "(no next move)\n");
   }
   fprintf( fd,"\n");
   fflush(fd);
@@ -1118,11 +1249,15 @@ void kanji_print_board( FILE *fd )
 void full_kanji_print_board( FILE *fd )
 {
   
-  int i;
+  int i, j = 1;
   int from_square, to_square; /* last move */
   int next_from, next_to; /* next move */
   BOOL same_rank = FALSE; /* have to pass every rank twice for the two kanjis */
   /* get the last move, should be in undo_dat[undos] */
+
+  if ( undos > 60 ) 
+    j = undos - 60;
+
   if ( undos ) {
     from_square = undo_dat[undos-1].m.b.from;
     to_square = undo_dat[undos-1].m.b.to;
@@ -1208,21 +1343,51 @@ void full_kanji_print_board( FILE *fd )
       break;
     }
     if ((i + 1) % RANKS == 0 && i != LASTSQUARE ) {
-      if ( same_rank ) {
-	fprintf( fd,"║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
-	same_rank = FALSE;
-      } else {
-	fprintf( fd, "║\n  ");
-	i-=16;
-	same_rank = TRUE;
+      if ( annotate && undos && (j <= undos )) {
+	if ( same_rank ) {
+	  fprintf( fd,"║ %c  %d. %s\n", 'a' + GetRank(i), j, move_str(undo_dat[j-1].m.b));
+	  j++;
+	  if ( undos && (j <= undos )) {
+	    fprintf( fd, "  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢    %d. %s \n%c ",
+		   j, move_str(undo_dat[j-1].m.b), 'b' + GetRank(i));
+	    j++;
+	  } else {
+	    fprintf( fd, "  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ",
+		     'b' + GetRank(i));
+	  }
+	  same_rank = FALSE;
+	} else {
+	  fprintf( fd, "║    %d. %s \n  ", j, move_str(undo_dat[j-1].m.b)); 
+	  i-=16;
+	  same_rank = TRUE;
+	  j++;
+	}
+
+	if (( i == LASTSQUARE )&& !same_rank) {
+	  fprintf( fd, "║    %d. %s \n%c ", j, move_str(undo_dat[j-1].m.b), 'b' + GetRank(i)); 
+	  i-=16;
+	  same_rank = TRUE;
+	  j++;
+	}
+
+      } else { /* if annotate && undos && j <= undos */
+	if ( same_rank ) {
+	  fprintf( fd,"║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
+	  same_rank = FALSE;
+	} else {
+	  fprintf( fd, "║\n  ");
+	  i-=16;
+	  same_rank = TRUE;
+	}
       }
     }
     if (( i == LASTSQUARE )&& !same_rank) {
-	fprintf( fd, "║\n  ");
-	i-=16;
-	same_rank = TRUE;	
+      fprintf( fd, "║\n  ");
+      i-=16;
+      same_rank = TRUE;	
     }
   }
+
   fprintf( fd,"║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
 
   if ( undos ) {

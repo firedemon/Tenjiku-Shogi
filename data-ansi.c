@@ -144,6 +144,11 @@ int promotion[PIECE_TYPES] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
+/*
+  int demote[PIECE_TYPES] = {
+  PAWN, KING, DRUNK_ELEPHANT, GOLD, SILVER, COPPER,
+*/
+
 move_type move_types[PIECE_TYPES][9] = {
   /* first eight are ofset directions, 9th is lion/igui/ */
   { step, none, none, none, none, none, none, none, none },       /* Pawn */
@@ -386,11 +391,11 @@ unsigned char *unpadded_piece_string[PIECE_TYPES] = {
 	"P", "K", "DE", "G", "S", "C", "I", "FL", "N", "L", "RC", "ChS", "BT",
 	"Ky", "Ph", "FK", "SM", "SSd", "VM", "VSd", "R", "Ln", "B",
 	"DH", "DK", "HF", "SEg", "WB", "Dg", "BGn", "RGn", "GGn", "FEg", "LHk", "VGn", "FiD",
-	"\e[31mCP\e[30m", "\e[31mFO\e[30m", "\e[31mFS\e[30m", "\e[31mFBo\e[30m", "\e[31mHT\e[30m", "\e[31mMGn\e[30m", "\e[31m+P\e[30m", "\e[31mW\e[30m", "\e[31mWH\e[30m", 
-	/* promoted and unpromoted */
-	 "\e[31mFK\e[30m", "\e[31mSM\e[30m", "\e[31mSSd\e[30m", "\e[31mVM\e[30m", "\e[31mVSD\e[30m", "\e[31mR\e[30m", "\e[31mLn\e[30m", " \e[31mB\e[30m",
-	"\e[31mDH\e[30m", "\e[31mDK\e[30m", "\e[31mHF\e[30m", "\e[31mSEg\e[30m", "\e[31mWB\e[0m", "\e[31mBGn\e[30m", "\e[31mRGn\e[30m", "\e[31mChS\e[30m",
- "\e[31mFEg\e[30m", "\e[31mLHk\e[30m", "\e[31mFiD\e[30m", "\e[31mVGn\e[30m", "\e[31mGGn\e[30m"
+	"CP", "FO", "FS", "FBo", "HT", "MGn", "+P", "W", "WH", 
+	/* promoted and unpromoted, yep FO double is unnecessary */
+	 "+Ph", "+C", "+N", "FO", "+I", "+G", "+Ky", "+FL",
+	"+B", "+R", "+DH", "+DK", "+SSd", "+HF", "+SEg", "+VSd",
+	"+FK", "+Ln", "+WB", "+BGn", "+RGn"
 };
 
 
@@ -400,31 +405,31 @@ unsigned char *TeX_light_piece_string[PIECE_TYPES] = {
 	"Ryume", "Ryuo", "Kakuo", "Hiju", "Suigyu", "Inu", "Kakusho", "Hisho", "Taisho", "Honju", "Shiyo", "Fukusho", "Kaki",
 	"Red{Taishi}", "Red{Higyu}", "Red{Hiroku}", "Red{Honcho}", "Red{Shiteno}", "Red{Suisho}", "Red{Kinsho}", "Red{Keigei}", "Red{Hakku}", 
 	/* promoted and unpromoted */
-	 "Red{Hono}", "Red{Ogyo}", "\e[31mssd\e[30m", "\e[31mVM\e[30m ", "\e[31mVSD\e[30m", " \e[31mr\e[30m ", "\e[31mLn \e[30m", " \e[31mb\e[30m ",
-	"\e[31mDH\e[30m ", "\e[31mDK\e[30m ", "\e[31mHF\e[30m ", "\e[31mSEg\e[30m", "\e[31mWB\e[30m ", "\e[31mBGn\e[30m", "\e[31mRGn\e[30m", "\e[31mChS\e[30m",
- "\e[31mFEg\e[30m", "\e[31mLHk\e[0m", "\e[31mFiD\e[30m", "\e[31mVGn\e[30m", "\e[31mGGn\e[30m"
+	 "Red{Hono}", "Red{Ogyo}", "Red{Ohei}", "Red{Shugyo}", "Red{Shuhei}", "Red{Hisha}", "Red{Shishi}", "Red{Kakugyo}",
+	"Red{Ryume}", "Red{Ryuo}", "Red{Kakuo}", "Red{Hiju}", "Red{Suigyu}", "Red{Kakusho}", "Red{Hisho}", "Red{Shahei}",
+ "Red{Honju}", "Red{Shiyo}", "Red{Kaki}", "Red{Fukusho}", "Red{Taisho}"
 };
 
 unsigned char *TeX_dark_piece_string[PIECE_TYPES] = {
 	"FUHYO", "GYOKUSHO", "SUIZO", "KINSHO", "GINSHO", "DOSHO", "TESSHO", "MOHYO", "KEIMA", "KYOSHA", "HANSHA", "SHAHEI", "MOKO",
 	"KIRIN", "HOO", "HONO", "OGYO", "KOHEI", "KENGYO", "KENHEI", "HISHA", "SHISHI", "KAKUGYO",
 	"RYUME", "RYUO", "KAKUO", "HIJU", "SUIGYU", "INU", "KAKUSHO", "HISHO", "TAISHO", "HONJU", "SHIYO", "FUKUSHO", "KAKI",
-	"RED{TAISHI}", "RED{HIGYU}", "RED{HIROKU}", "RED{HONCHO}", "RED{SHITENO}", "RED{SUISHO}", "RED{KINSHO}", "RED{KEIGEI}", "RED{HAKKU}", 
+	"Red{TAISHI}", "Red{HIGYU}", "Red{HIROKU}", "Red{HONCHO}", "Red{SHITENO}", "Red{SUISHO}", "Red{KINSHO}", "Red{KEIGEI}", "Red{HAKKU}", 
 	/* promoted and unpromoted */
-	 "RED{HONO}", "RED{OGYO}", "RED{ssd}", "\e[31mVM\e[30m ", "\e[31mVSD\e[30m", " \e[31mr\e[30m ", "\e[31mLn \e[30m", " \e[31mb\e[30m ",
-	"\e[31mDH\e[30m ", "\e[31mDK\e[30m ", "\e[31mHF\e[30m ", "\e[31mSEg\e[30m", "wb ", "\e[31mBGn\e[30m", "\e[31mRGn\e[30m", "\e[31mChS\e[30m",
- "\e[31mFEg\e[30m", "\e[31mLHk\e[0m", "\e[31mFiD\e[30m", "\e[31mVGn\e[30m", "\e[31mGGn\e[30m"
+	 "Red{HONO}", "Red{OGYO}", "Red{OHEI}", "Red{SHUGYO}", "Red{SHUHEI}", "Red{HISHA}", "Red{SHISHI}", "Red{KAKUGYO}",
+	"Red{RYUME}", "Red{RYUO}", "Red{KAKUO}", "Red{HIJU}", "Red{SUIGYU}", "Red{KAKUSHO}", "Red{HISHO}", "Red{SHAHEI}",
+ "Red{HONJU}", "Red{SHIYO}", "Red{KAKI}", "Red{FUKUSHO}", "Red{TAISHO}"
 };
 
 unsigned char *kanji_piece_string[PIECE_TYPES] = {
-	" 歩", " 玉", " 象", " 金", " 銀", " 銅", " 鉄", " 猛", " 桂", " 香", " 反", " 車", " 虎",
-	" 麒", " 鳳", " 奔", " 横", "横!", " 竪", "竪!", " 飛", " 獅", " 角",
-	" 馬", " 龍", " 鷹", " 鷲", " 水", " 犬", "角!", "飛!", "大!", "奔!", "獅!", "副!", " 火",
-	" \e[31m子\e[30m", " \e[31m牛\e[30m", " \e[31m鹿\e[30m", " \e[31m猪\e[30m", " \e[31m天\e[0m", " \e[31m雜\e[30m", " \e[31m金\e[30m", " \e[31m鯨\e[30m", " \e[31m駒\e[30m", 
+	"歩 ", "玉 ", "象 ", "金 ", "銀 ", "銅 ", "鉄 ", "猛 ", "桂 ", "香 ", "反 ", "車 ", "虎 ",
+	"麒 ", "鳳 ", "奔 ", "横 ", "横!", "竪 ", "竪!", "飛 ", "獅 ", "角 ",
+	"馬 ", "龍 ", "鷹 ", "鷲 ", "水 ", "犬 ", "角!", "飛!", "大!", "奔!", "獅!", "副!", "火 ",
+	"\e[31m子\e[30m ", "\e[31m牛\e[30m ", "\e[31m鹿\e[30m ", "\e[31m猪\e[30m ", "\e[31m天\e[0m ", "\e[31m雜\e[30m ", "\e[31m金\e[30m ", "\e[31m鯨\e[30m ", "\e[31m駒\e[30m ", 
 	/* promoted and unpromoted */
-	 " \e[31m奔\e[30m", "\e[31m横\e[30m", "\e[31m横!\e[30m", "\e[31m竪\e[30m ", "\e[31m竪!\e[30m", " \e[31m飛\e[30m ", " \e[31m獅\e[30m", " \e[31m角\e[30m",
-	" \e[31m馬\e[30m", " \e[31m龍\e[30m", " \e[31m鷹\e[30m", " \e[31m鷲\e[30m", " \e[31m水\e[30m", "\e[31m角!\e[30m", "\e[31m飛!\e[30m", " \e[31m車\e[30m",
- "\e[31mFEg\e[30m", "\e[31mLHk\e[0m", "\e[31mFiD\e[30m", "\e[31mVGn\e[30m", "\e[31mGGn\e[30m",
+	 "\e[31m奔\e[30m ", "\e[31m横\e[30m ", "\e[31m横!\e[30m", "\e[31m竪\e[30m ", "\e[31m竪!\e[30m", "\e[31m飛\e[30m ", "\e[31m獅\e[30m ", "\e[31m角\e[30m ",
+	"\e[31m馬\e[30m ", "\e[31m龍\e[30m ", "\e[31m鷹\e[30m ", "\e[31m鷲\e[30m ", "\e[31m水\e[30m ", "\e[31m角!\e[30m", "\e[31m飛!\e[30m", "\e[31m車\e[30m ",
+ "\e[31m奔!\e[30m", "\e[31m獅!\e[0m", "\e[31m火\e[30m ", "\e[31m副!\e[30m", "\e[31m大!\e[30m",
 };
 
 unsigned char *upper_kanji_string[PIECE_TYPES] = {
@@ -435,7 +440,7 @@ unsigned char *upper_kanji_string[PIECE_TYPES] = {
 	/* promoted and unpromoted */
 	 "\e[31m奔\e[30m", "\e[31m横\e[30m", "\e[31m横\e[30m", "\e[31m竪\e[30m", "\e[31m竪\e[30m", "\e[31m飛\e[30m ", "\e[31m獅\e[30m", "\e[31m角\e[30m",
 	"\e[31m龍\e[30m", "\e[31m龍\e[30m", "\e[31m角\e[30m", "\e[31m飛\e[30m", "\e[31m水\e[30m", "\e[31m角!\e[30m", "\e[31m飛!\e[30m", "\e[31m車\e[30m",
- "\e[31mFEg\e[30m", "\e[31mLHk\e[0m", "\e[31mFiD\e[30m", "\e[31mVGn\e[30m", "\e[31mGGn\e[30m",
+ "\e[31m奔\e[30m", "\e[31m獅\e[0m", "\e[31m火\e[30m", "\e[31m副\e[30m", "\e[31m大\e[30m"
 };
 
 unsigned char *lower_kanji_string[PIECE_TYPES] = {
@@ -446,7 +451,7 @@ unsigned char *lower_kanji_string[PIECE_TYPES] = {
 	/* promoted and unpromoted */
 	 "\e[31m王\e[30m", "\e[31m行\e[30m", "\e[31m兵\e[30m", "\e[31m行\e[30m", "\e[31m兵\e[30m", "\e[31m車\e[30m ", "\e[31m子\e[30m", "\e[31m行\e[30m",
 	" \e[31m馬\e[30m", "\e[31m王\e[30m", "\e[31m鷹\e[30m", "\e[31m鷲\e[30m", "\e[31m牛\e[30m", "\e[31m将\e[30m", "\e[31m将\e[30m", "\e[31m兵\e[30m",
- "\e[31mFEg\e[30m", "\e[31mLHk\e[0m", "\e[31mFiD\e[30m", "\e[31mVGn\e[30m", "\e[31mGGn\e[30m"
+ "\e[31m王\e[30m", "\e[31m鷹\e[0m", "\e[31m鬼\e[30m", "\e[31m将\e[30m", "\e[31m将\e[30m"
 };
 
 char *color_string[6] = {

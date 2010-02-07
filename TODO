@@ -6,19 +6,31 @@ to fix:
 - clear up show_moves (done) and show_influence
 - burning doesn't show up in influences - should be several grades
   a) direct move b) move after a pieces type a) has moved c) burning (buggy)
-- redo shows wrong piece (loadold qa4, 6c-4e, undo)
-- lion double move
+- redo shows wrong piece (loadold qa4, 6c-4e, undo - fixed)
 
 
 to add:
+
 - put savegames into their own folder with extension (partly done)
-- add readline completion for load
-- give last move with fully correct attributes (captures, promotion, burns)
+- give last move with fully correct attributes (captures, promotion, burns - it's better now)
 - add better documentation (good one!)
-- network option
-- mating solver
 - setup positions (done)
 - show checks (done)
+- trim strings for kifu (done)
+- keep track of material (done)
+- add burning pieces to move_str (done)
+- burn information should go into move_bits (done)
+
+- make board turnable
+- make colors etc. configurable
+- rewrite input parser
+- network option
+- mating solver
+- rewrite input parser
+- hide colors from savegames
+- trim strings for kifu
+- put redos into kifu
+- add readline completion for load
 
 consider:
 -graphical GUI
@@ -28,10 +40,9 @@ consider:
 -show igui among possible moves
 - burn_all_FiD not implemented
 
-
 earlier done:
 
--make shortcut commands and moves like ZoG (partly ok, giving only one square works, sometimes BUGGY FOR CAPTURING)
+-make shortcut commands and moves like ZoG (partly ok, giving only one square works, sometimes BUGGY)
 
 
 minor bugs: influence can't see whether a piece is defended by a jgn and attacked by a jgn

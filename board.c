@@ -1376,8 +1376,9 @@ void gen_push(int from, int to, int bits)
 
 	g->score = 0;
 	g->m.b.bits = (unsigned char)bits;
+	g->m.b.burned_pieces = '0';
 
-	if ( piece[from] == FIRE_DEMON ) {
+	if (( piece[from] == FIRE_DEMON ) || ( piece[from] == PFIRE_DEMON )) {
 	  g->m.b.bits |= 64;
 	  for (i = 0; i < 8; i++) {
 	    k = to + lion_single_steps[i];
@@ -1387,8 +1388,10 @@ void gen_push(int from, int to, int bits)
 		 from, to, k); */
 	    }
 	    n = mailbox256[to + lion_single_steps[i]];
-	    if (( n >= 0 ) && (n < NUMSQUARES) && ( color[n] == xside )) {
+	    if (( n >= 0 ) && (n < NUMSQUARES) && 
+		(piece[k] != EMPTY) && ( color[k] == xside )) {
 	      g->score += piece[to];
+	      g->m.b.burned_pieces ++;
 	    }
 	  }
 	}
@@ -1558,7 +1561,7 @@ BOOL makemove(move_bytes m)
 }
 
 BOOL make_lion_move( move_bytes m) {
-  BOOL captured = FALSE;
+  BOOL sth_captured = FALSE;
   /* back up information so we can take the move back later. */
   hist_dat[ply].m.b = m;
   hist_dat[ply].oldpiece = piece[(int)m.from];
@@ -1566,13 +1569,14 @@ BOOL make_lion_move( move_bytes m) {
   hist_dat[ply].last_capture = last_capture;
   hist_dat[ply].over = (int)m.over;
 
-  if ( piece[(int)m.over] != EMPTY ) {
+  if (( piece[(int)m.over] != EMPTY )|| (color[(int)m.over] == xside)) {
     hist_dat[ply].capture2 = piece[(int)m.over];
     pieces_count[xside] --;
+    captured[xside][demote(piece[(int)m.over])]++;
     color[(int)m.over] = EMPTY;
     piece[(int)m.over] = EMPTY;
     last_capture = 0;
-    captured = TRUE;
+    sth_captured = TRUE;
   } else {
     hist_dat[ply].capture2 = EMPTY;
   }
@@ -1583,13 +1587,14 @@ BOOL make_lion_move( move_bytes m) {
       fprintf(stderr,"#Error in make_lion_move\n");
 #endif
     pieces_count[xside] --;
+    captured[xside][demote(piece[(int)m.to])]++;
     hist_dat[ply].capture = piece[(int)m.to];
     if ( m.bits & 16 )  /* promotion */
       piece[(int)m.to] = m.promote;
     else
       piece[(int)m.to] = piece[(int)m.from];
     last_capture = 0;
-    captured = TRUE;
+    sth_captured = TRUE;
   } 
   color[(int)m.to] = side;
   if ( m.bits & 16 )  /* promotion */
@@ -1600,9 +1605,10 @@ BOOL make_lion_move( move_bytes m) {
   if ( m.bits & 2 ) { /* suicide move */
     piece[(int)m.to] = EMPTY;
     color[(int)m.to] = EMPTY;
+    captured[side][demote(piece[(int)m.from])]++;
   }
 
-  if (!captured) {
+  if (!sth_captured) {
     last_capture++;
   } else {
     last_capture = 0;
@@ -1640,6 +1646,7 @@ BOOL make_igui( move_bytes m ) {
   hist_dat[ply].oldpiece = piece[(int)m.from];
   hist_dat[ply].capture = piece[(int)m.to];
   hist_dat[ply].last_capture = last_capture;
+  captured[xside][demote(piece[(int)m.to])]++;
 #ifdef DEBUG  
   if ((hist_dat[ply].capture != EMPTY ) && !(m.bits & 1)) {
     /* print_board(stderr); */
@@ -1698,6 +1705,7 @@ BOOL make_FiD( move_bytes m ) {
   if ( piece[(int)m.to] != EMPTY ) { /* capture */
     pieces_count[xside] --;
     hist_dat[ply].capture = piece[(int)m.to];
+    captured[xside][demote(piece[(int)m.to])]++;
     /* hist_dat[ply].m.b.bits |= 1; */
   } else {
     hist_dat[ply].capture = EMPTY;
@@ -1719,6 +1727,7 @@ BOOL make_FiD( move_bytes m ) {
 	if ((n != -1)&&( color[n] == xside )) {
 	  /* hist_dat[ply].m.b.bits |= 1; */
 	  hist_dat[ply].burn[i] = piece[n];
+	  captured[xside][demote(piece[n])]++;
 	  piece[n] = EMPTY;
 	  color[n] = EMPTY;
 	}
@@ -1728,6 +1737,7 @@ BOOL make_FiD( move_bytes m ) {
 
   if ( m.bits & 2 ) { /* only the FiD burns */
     fire_demons[side]--;
+    captured[side][FIRE_DEMON]++;
     piece[(int)m.to] = EMPTY;
     color[(int)m.to] = EMPTY;
   }
@@ -1757,7 +1767,8 @@ BOOL make_normal_move( move_bytes m ) {
   hist_dat[ply].last_capture = last_capture;
   hist_dat[ply].over = (int)m.over; /* should not be needed */
 
-  captured[xside][piece[(int)m.to]]++;
+  if (( piece[(int)m.to] != EMPTY )&& (color[(int)m.to] == xside))
+    captured[xside][demote(piece[(int)m.to])]++;
 
 #ifdef DEBUG  
   if ((hist_dat[ply].capture != EMPTY ) && !(m.bits & 1)) {
@@ -1782,6 +1793,7 @@ BOOL make_normal_move( move_bytes m ) {
   if ( m.bits & 2 ) { /* suicide move */
     piece[(int)m.to] = EMPTY;
     color[(int)m.to] = EMPTY;
+    captured[side][demote(piece[(int)m.from])]++;
   }
 
   piece[(int)m.from] = EMPTY;
@@ -1859,6 +1871,9 @@ void takeback()
   m = hist_dat[ply].m.b;
   /* fprintf( stderr,"#tb %s ", move_str(m) ); */
   last_capture = hist_dat[ply].last_capture;
+  if ( m.bits & 2 ) { /* suicide move */
+    captured[side][demote(hist_dat[ply].oldpiece)]--;
+  }
   if ( m.bits & 4 ) /* lion double step */
     take_back_lion_move(m);
   else if ( m.bits & 32 ) /* igui */
@@ -1883,6 +1898,7 @@ void take_back_lion_move(move_bytes m) {
   } else if ( m.bits & 1 ) {
     color[(int)m.to] = xside;
     piece[(int)m.to] = hist_dat[ply].capture;
+    captured[xside][demote(piece[(int)m.to])]--;
   } else {
     fprintf(stderr,"#Error 1 in take_back_lion_move\n");
   }
@@ -1893,6 +1909,7 @@ void take_back_lion_move(move_bytes m) {
   } else if ( m.bits & 1 ) {
     color[(int)m.over] = xside;
     piece[(int)m.over] = hist_dat[ply].capture2;
+    captured[xside][demote(piece[(int)m.over])]--;
   } else { /* capture2 not empty, but bit 1 not set, and bit 4
 	      should not have been set */
     fprintf(stderr,"#Error 2 in take_back_lion_move\n");
@@ -1914,6 +1931,7 @@ void take_back_igui(move_bytes m) {
   } else if ( m.bits & 1 ) {
     color[(int)m.to] = xside;
     piece[(int)m.to] = hist_dat[ply].capture;
+    captured[xside][demote(piece[(int)m.to])]--;
   } else {
     /* print_board(stderr); */
     fprintf(stderr,"#Error in take_back_igui: capture: %d\n", hist_dat[ply].capture);
@@ -1937,6 +1955,7 @@ void take_back_FiD(move_bytes m) {
     if ((n != -1)&&(hist_dat[ply].burn[i] != EMPTY )) {
       piece[n] = hist_dat[ply].burn[i];
       color[n] = xside;
+      captured[xside][demote(piece[n])]--;
       }
     }
 
@@ -1946,6 +1965,7 @@ void take_back_FiD(move_bytes m) {
   } else if ( m.bits & 1 ) {
     color[(int)m.to] = xside;
     piece[(int)m.to] = hist_dat[ply].capture;
+    captured[xside][demote(piece[(int)m.to])]--;
   } else {
     /* print_board(stderr); */
     fprintf(stderr,"#Error in take_back_FiD\n");
@@ -1969,7 +1989,7 @@ void take_back_normal(move_bytes m) { /* can be capture or not */
   } else if ( m.bits & 1 ) {
     color[(int)m.to] = xside;
     piece[(int)m.to] = hist_dat[ply].capture;
-    captured[xside][piece[(int)m.to]]--;
+    captured[xside][demote(piece[(int)m.to])]--;
     if ( hist_dat[ply].capture == FIRE_DEMON ) {
       fire_demons[xside]++;
     }
@@ -2179,4 +2199,13 @@ void gen_checks()
 	/* the next ply's moves need to start where the current
 	   ply's end */
 	gen_begin[ply + 1] = gen_end[ply];
+}
+
+int demote ( int this_piece ) {
+  int i;
+  for ( i = 0; i < PIECE_TYPES; i++ ) {
+    if ( this_piece && ( this_piece == promotion[i] ))
+      return i;
+  }
+  return this_piece;
 }

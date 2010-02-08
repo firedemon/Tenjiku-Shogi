@@ -25,6 +25,7 @@ char savegamepath[1024] = "savegames";
 char positionpath[1024] = "positions";
 char positionfile[1024];
 
+BOOL rotated = FALSE; /* board is not rotated */
 BOOL annotate = TRUE;
 BOOL search_quiesce = TRUE;
 BOOL jgs_tsa = FALSE; /* tsa rule by default off */
@@ -305,6 +306,14 @@ int main(int argc,  char **argv)
 		if (!strcmp(s, "fullkanji")) {
 		  fullkanji=TRUE;
 		  kanji = FALSE;
+		  print_board( stdout );
+		  continue;
+		}
+		if (!strcmp(s, "rotated") || !strcmp(s,"r")) {
+		  if ( !rotated ) 
+		    rotated = TRUE;
+		  else
+		    rotated = FALSE;
 		  print_board( stdout );
 		  continue;
 		}
@@ -1060,67 +1069,131 @@ void ascii_print_board( FILE *fd )
     next_to = -1;
   }
 
-  fprintf( fd,"\e[0m\n\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n");
-  fprintf( fd,"  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\na ");
-  for (i = 0; i < NUMSQUARES; ++i) {
-    switch (color[i]) {
-    case EMPTY:
-      if (( i == from_square )||( i == to_square )) {
-	if ( i %RANKS == 0 )
-	  fprintf( fd, "║\e[43m   \e[0m");
-	else
-	  fprintf( fd, "│\e[43m   \e[0m");
-      } else {
-	if ( i % RANKS == 0 )
-	  fprintf( fd,"║   ");
-	else
-	  fprintf( fd,"│   ");
+  if ( rotated ) {
+   fprintf( fd,"\e[0m\n\n   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15  16\n");
+    fprintf( fd,"  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\np ");
+    for (i = NUMSQUARES -1; i >= 0; i--) {
+      switch (color[i]) {
+      case EMPTY:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 15 )
+	    fprintf( fd, "║\e[43m   \e[0m");
+	  else
+	    fprintf( fd, "│\e[43m   \e[0m");
+	} else {
+	  if ( i % RANKS == 15 )
+	    fprintf( fd,"║   ");
+	  else
+	    fprintf( fd,"│   ");
+	}
+	break;
+      case LIGHT:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 15 )
+	    fprintf( fd,"║\e[43m\e[1m%s\e[0m", piece_string[piece[i]]);
+	  else
+	    fprintf( fd,"│\e[43m\e[1m%s\e[0m", piece_string[piece[i]]);
+	} else {
+	  if ( i %RANKS == 15 )
+	    fprintf( fd,"║\e[1m%s\e[0m", piece_string[piece[i]]);
+	  else
+	    fprintf( fd,"│\e[1m%s\e[0m", piece_string[piece[i]]);
+	}
+	break;
+      case DARK:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 15 )
+	    fprintf( fd,"║\e[43m%s\e[0m", piece_string[piece[i]]);
+	  else
+	    fprintf( fd,"│\e[43m%s\e[0m", piece_string[piece[i]]);
+	} else {
+	  if ( i %RANKS == 15 )
+	    fprintf( fd,"║%s", piece_string[piece[i]]);
+	  else
+	    fprintf( fd,"│%s", piece_string[piece[i]]);
+	}
+	break;
       }
-      break;
-    case LIGHT:
-      if (( i == from_square )||( i == to_square )) {
-	if ( i %RANKS == 0 )
-	  fprintf( fd,"║\e[43m\e[1m%s\e[0m", piece_string[piece[i]]);
-	else
-	  fprintf( fd,"│\e[43m\e[1m%s\e[0m", piece_string[piece[i]]);
-      } else {
-	if ( i %RANKS == 0 )
-	  fprintf( fd,"║\e[1m%s\e[0m", piece_string[piece[i]]);
-	else
-	  fprintf( fd,"│\e[1m%s\e[0m", piece_string[piece[i]]);
+      if ((i + 1) % RANKS == 1 && i != 0) {
+	if ( annotate && undos && (j <= undos )) {
+	  fprintf( fd,"║ %c   %d. %s\n", 'a' + GetRank(i) , j, move_str(undo_dat[j-1].m.b));
+	  j++;
+	  if ( j <=undos ) {
+	    fprintf( fd,"  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢     %d. %s \n%c ", j, move_str(undo_dat[j-1].m.b), 'a' + GetRank(i) - 1); 
+	    j++;
+	  } else {
+	    fprintf( fd,"  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i) - 1); 
+	  }
+	} else {
+	  fprintf( fd,"║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'a' + GetRank(i)-1); 
+	}
       }
-      break;
-    case DARK:
-       if (( i == from_square )||( i == to_square )) {
-	if ( i %RANKS == 0 )
-	  fprintf( fd,"║\e[43m%s\e[0m", piece_string[piece[i]]);
-	else
-	  fprintf( fd,"│\e[43m%s\e[0m", piece_string[piece[i]]);
-      } else {
-	if ( i %RANKS == 0 )
-	  fprintf( fd,"║%s", piece_string[piece[i]]);
-	else
-	  fprintf( fd,"│%s", piece_string[piece[i]]);
-      }
-      break;
     }
-    if ((i + 1) % RANKS == 0 && i != LASTSQUARE) {
-      if ( annotate && undos && (j <= undos )) {
-	fprintf( fd,"║ %c   %d. %s\n", 'a' + GetRank(i), j, move_str(undo_dat[j-1].m.b));
-	j++;
+    fprintf( fd,"║ a\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n");
+   fprintf( fd,"\e[0m   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15  16\n");
+
+  } else { 
+    fprintf( fd,"\e[0m\n\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n");
+    fprintf( fd,"  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\na ");
+    for (i = 0; i < NUMSQUARES; ++i) {
+      switch (color[i]) {
+      case EMPTY:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 0 )
+	    fprintf( fd, "║\e[43m   \e[0m");
+	  else
+	    fprintf( fd, "│\e[43m   \e[0m");
+	} else {
+	  if ( i % RANKS == 0 )
+	    fprintf( fd,"║   ");
+	  else
+	    fprintf( fd,"│   ");
+	}
+	break;
+      case LIGHT:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 0 )
+	    fprintf( fd,"║\e[43m\e[1m%s\e[0m", piece_string[piece[i]]);
+	  else
+	    fprintf( fd,"│\e[43m\e[1m%s\e[0m", piece_string[piece[i]]);
+	} else {
+	  if ( i %RANKS == 0 )
+	    fprintf( fd,"║\e[1m%s\e[0m", piece_string[piece[i]]);
+	  else
+	    fprintf( fd,"│\e[1m%s\e[0m", piece_string[piece[i]]);
+	}
+	break;
+      case DARK:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 0 )
+	    fprintf( fd,"║\e[43m%s\e[0m", piece_string[piece[i]]);
+	  else
+	    fprintf( fd,"│\e[43m%s\e[0m", piece_string[piece[i]]);
+	} else {
+	  if ( i %RANKS == 0 )
+	    fprintf( fd,"║%s", piece_string[piece[i]]);
+	  else
+	    fprintf( fd,"│%s", piece_string[piece[i]]);
+	}
+	break;
+      }
+      if ((i + 1) % RANKS == 0 && i != LASTSQUARE) {
+	if ( annotate && undos && (j <= undos )) {
+	  fprintf( fd,"║ %c   %d. %s\n", 'a' + GetRank(i), j, move_str(undo_dat[j-1].m.b));
+	  j++;
 	if ( j <=undos ) {
 	  fprintf( fd,"  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢     %d. %s \n%c ", j, move_str(undo_dat[j-1].m.b), 'b' + GetRank(i)); 
 	  j++;
 	} else {
 	  fprintf( fd,"  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
 	}
-      } else {
-	fprintf( fd,"║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
+	} else {
+	  fprintf( fd,"║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
+	}
       }
     }
-  }
   fprintf( fd,"║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
-
+  }
   if ( undos ) { 
     fprintf( fd, "%s to move (last move: %d. %s)\n",
 	     side_name[side], undos, move_str(undo_dat[undos-1].m.b));
@@ -1167,66 +1240,131 @@ void kanji_print_board( FILE *fd )
     next_to = -1;
   }
 
-  fprintf( fd,"\e[0m\n\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n");
-  fprintf( fd,"  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\na ");
-  for (i = 0; i < NUMSQUARES; ++i) {
-    switch (color[i]) {
-    case EMPTY:
-      if (( i == from_square )||( i == to_square )) {
-	if ( i %RANKS == 0 )
-	  fprintf( fd, "║\e[43m   \e[0m");
-	else
-	  fprintf( fd, "│\e[43m   \e[0m");
-      } else {
-	if ( i % RANKS == 0 )
-	  fprintf( fd,"║   ");
-	else
-	  fprintf( fd,"│   ");
+  if ( rotated ) {
+   fprintf( fd,"\e[0m\n\n   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15  16\n");
+    fprintf( fd,"  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\np ");
+    for (i = NUMSQUARES -1; i >= 0; i--) {
+      switch (color[i]) {
+      case EMPTY:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 15 )
+	    fprintf( fd, "║\e[43m   \e[0m");
+	  else
+	    fprintf( fd, "│\e[43m   \e[0m");
+	} else {
+	  if ( i % RANKS == 15 )
+	    fprintf( fd,"║   ");
+	  else
+	    fprintf( fd,"│   ");
+	}
+	break;
+      case LIGHT:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 15 )
+	    fprintf( fd,"║\e[43m\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	  else
+	    fprintf( fd,"│\e[43m\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	} else {
+	  if ( i %RANKS == 15 )
+	    fprintf( fd,"║\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	  else
+	    fprintf( fd,"│\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	}
+	break;
+      case DARK:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 15 )
+	    fprintf( fd,"║\e[43m%s\e[0m", kanji_piece_string[piece[i]]);
+	  else
+	    fprintf( fd,"│\e[43m%s\e[0m", kanji_piece_string[piece[i]]);
+	} else {
+	  if ( i %RANKS == 15 )
+	    fprintf( fd,"║%s", kanji_piece_string[piece[i]]);
+	  else
+	    fprintf( fd,"│%s", kanji_piece_string[piece[i]]);
+	}
+	break;
       }
-      break;
-    case LIGHT:
-      if (( i == from_square )||( i == to_square )) {
-	if ( i %RANKS == 0 )
-	  fprintf( fd,"║\e[43m\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
-	else
-	  fprintf( fd,"│\e[43m\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
-      } else {
-	if ( i %RANKS == 0 )
-	  fprintf( fd,"║\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
-	else
-	  fprintf( fd,"│\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
-      }
-      break;
-    case DARK:
-      if (( i == from_square )||( i == to_square )) {
-	if ( i %RANKS == 0 )
-	  fprintf( fd,"║\e[43m%s\e[0m", kanji_piece_string[piece[i]]);
-	else
-	  fprintf( fd,"│\e[43m%s\e[0m", kanji_piece_string[piece[i]]);
-      } else {
-	if ( i %RANKS == 0 )
-	  fprintf( fd,"║%s", kanji_piece_string[piece[i]]);
-	else
-	  fprintf( fd,"│%s", kanji_piece_string[piece[i]]);
-      }
-      break;
-    }
-    if ((i + 1) % RANKS == 0 && i != LASTSQUARE) {
-      if ( annotate && undos && (j <= undos )) {
-	fprintf( fd,"║ %c   %d. %s\n", 'a' + GetRank(i), j, move_str(undo_dat[j-1].m.b));
-	j++;
-	if ( j <=undos ) {
-	  fprintf( fd,"  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢     %d. %s \n%c ", j, move_str(undo_dat[j-1].m.b), 'b' + GetRank(i)); 
+      if ((i + 1) % RANKS == 1 && i != 0) {
+	if ( annotate && undos && (j <= undos )) {
+	  fprintf( fd,"║ %c   %d. %s\n", 'a' + GetRank(i) , j, move_str(undo_dat[j-1].m.b));
 	  j++;
+	  if ( j <=undos ) {
+	    fprintf( fd,"  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢     %d. %s \n%c ", j, move_str(undo_dat[j-1].m.b), 'a' + GetRank(i) - 1); 
+	    j++;
+	  } else {
+	    fprintf( fd,"  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i) - 1); 
+	  }
+	} else {
+	  fprintf( fd,"║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'a' + GetRank(i)-1); 
+	}
+      }
+    }
+    fprintf( fd,"║ a\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n");
+   fprintf( fd,"\e[0m   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15  16\n");
+
+  } else {
+    fprintf( fd,"\e[0m\n\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n");
+    fprintf( fd,"  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\na ");
+    for (i = 0; i < NUMSQUARES; ++i) {
+      switch (color[i]) {
+      case EMPTY:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 0 )
+	    fprintf( fd, "║\e[43m   \e[0m");
+	  else
+	    fprintf( fd, "│\e[43m   \e[0m");
+	} else {
+	  if ( i % RANKS == 0 )
+	    fprintf( fd,"║   ");
+	  else
+	    fprintf( fd,"│   ");
+	}
+	break;
+      case LIGHT:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 0 )
+	    fprintf( fd,"║\e[43m\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	  else
+	    fprintf( fd,"│\e[43m\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	} else {
+	  if ( i %RANKS == 0 )
+	    fprintf( fd,"║\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	  else
+	    fprintf( fd,"│\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	}
+	break;
+      case DARK:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 0 )
+	    fprintf( fd,"║\e[43m%s\e[0m", kanji_piece_string[piece[i]]);
+	  else
+	    fprintf( fd,"│\e[43m%s\e[0m", kanji_piece_string[piece[i]]);
+	} else {
+	  if ( i %RANKS == 0 )
+	    fprintf( fd,"║%s", kanji_piece_string[piece[i]]);
+	  else
+	    fprintf( fd,"│%s", kanji_piece_string[piece[i]]);
+	}
+	break;
+      }
+      if ((i + 1) % RANKS == 0 && i != LASTSQUARE) {
+	if ( annotate && undos && (j <= undos )) {
+	  fprintf( fd,"║ %c   %d. %s\n", 'a' + GetRank(i), j, move_str(undo_dat[j-1].m.b));
+	  j++;
+	  if ( j <=undos ) {
+	    fprintf( fd,"  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢     %d. %s \n%c ", j, move_str(undo_dat[j-1].m.b), 'b' + GetRank(i)); 
+	    j++;
+	  } else {
+	    fprintf( fd,"  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'b' + GetRank(i)); 
+	  }
 	} else {
 	  fprintf( fd,"║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
 	}
-      } else {
-	fprintf( fd,"║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
       }
     }
+    fprintf( fd,"║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
   }
-  fprintf( fd,"║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
 
   if ( undos ) { 
     fprintf( fd, "%s to move (last move: %d. %s)\n",
@@ -1272,140 +1410,245 @@ void full_kanji_print_board( FILE *fd )
     next_from = -1;
     next_to = -1;
   }
-
-  fprintf( fd,"\e[0m\n\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n");
-  fprintf( fd,"  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\na ");
-  for (i = 0; i < NUMSQUARES; ++i) {
-    switch (color[i]) {
-    case EMPTY:
-      if (( i == from_square )||( i == to_square )) {
-	if ( i %RANKS == 0 )
-	  fprintf( fd, "║\e[43m   \e[0m");
-	else
-	  fprintf( fd, "│\e[43m   \e[0m");
-      } else {
-	if ( i % RANKS == 0 )
-	  fprintf( fd,"║   ");
+  if ( rotated ) {
+    fprintf( fd,"   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15  16\n");
+    fprintf( fd,"  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\n ");
+    for (i =  NUMSQUARES - 1; i>=0 ; i--) {
+      switch (color[i]) {
+      case EMPTY:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 15 )
+	    fprintf( fd, "║\e[43m   \e[0m");
+	  else
+	    fprintf( fd, "│\e[43m   \e[0m");
+	} else {
+	  if ( i % RANKS == 15 )
+	    fprintf( fd,"║   ");
 	else
 	  fprintf( fd,"│   ");
-      }
-      break;
-    case LIGHT:
-      if (( i == from_square )||( i == to_square )) {
-	if ( i %RANKS == 0 )
-	  if ( !same_rank )
-	    fprintf( fd,"║\e[43m↑\e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+	}
+	break;
+      case LIGHT:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 15 )
+	    if ( !same_rank )
+	      fprintf( fd,"║\e[43m↑\e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+	    else
+	      fprintf( fd,"║\e[43m↑\e[1m%s\e[0m", lower_kanji_string[piece[i]]);
 	  else
-	    fprintf( fd,"║\e[43m↑\e[1m%s\e[0m", lower_kanji_string[piece[i]]);
-	else
-	  if ( !same_rank ) 
-	    fprintf( fd,"│\e[43m↑\e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+	    if ( !same_rank ) 
+	      fprintf( fd,"│\e[43m↑\e[1m%s\e[0m", upper_kanji_string[piece[i]]);
 	  else
 	    fprintf( fd,"│\e[43m↑\e[1m%s\e[0m", lower_kanji_string[piece[i]]);
-      } else {
-	if ( i %RANKS == 0 )
-	  if ( !same_rank )
-	    fprintf( fd,"║\e[1m↑%s\e[0m", upper_kanji_string[piece[i]]);
+	} else {
+	  if ( i %RANKS == 15 )
+	    if ( !same_rank )
+	      fprintf( fd,"║\e[1m↑%s\e[0m", upper_kanji_string[piece[i]]);
+	    else
+	      fprintf( fd,"║\e[1m↑%s\e[0m", lower_kanji_string[piece[i]]);
 	  else
-	    fprintf( fd,"║\e[1m↑%s\e[0m", lower_kanji_string[piece[i]]);
-	else
-	  if ( !same_rank )
-	    fprintf( fd,"│\e[1m↑%s\e[0m", upper_kanji_string[piece[i]]);
+	    if ( !same_rank )
+	      fprintf( fd,"│\e[1m↑%s\e[0m", upper_kanji_string[piece[i]]);
+	    else
+	      fprintf( fd,"│\e[1m↑%s\e[0m", lower_kanji_string[piece[i]]);
+	}
+	break;
+      case DARK:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 15 )
+	    if ( !same_rank )
+	      fprintf( fd,"║\e[43m⇩%s\e[0m", upper_kanji_string[piece[i]]);
+	    else
+	      fprintf( fd,"║\e[43m⇩%s\e[0m", lower_kanji_string[piece[i]]);
 	  else
-	    fprintf( fd,"│\e[1m↑%s\e[0m", lower_kanji_string[piece[i]]);
+	    if ( !same_rank ) 
+	      fprintf( fd,"│\e[43m⇩%s\e[0m", upper_kanji_string[piece[i]]);
+	    else
+	      fprintf( fd,"│\e[43m⇩%s\e[0m", lower_kanji_string[piece[i]]);
+	  
+	} else {
+	  if ( i %RANKS == 15 )
+	    if ( !same_rank )
+	      fprintf( fd,"║⇩%s", upper_kanji_string[piece[i]]);
+	    else
+	      fprintf( fd,"║⇩%s", lower_kanji_string[piece[i]]);
+	  else
+	    if ( !same_rank )
+	      fprintf( fd,"│⇩%s", upper_kanji_string[piece[i]]);
+	    else
+	      fprintf( fd,"│⇩%s", lower_kanji_string[piece[i]]);
+	}
+	break;
       }
-      break;
-    case DARK:
-      if (( i == from_square )||( i == to_square )) {
-	if ( i %RANKS == 0 )
-	  if ( !same_rank )
-	    fprintf( fd,"║\e[43m⇩%s\e[0m", upper_kanji_string[piece[i]]);
-	  else
-	    fprintf( fd,"║\e[43m⇩%s\e[0m", lower_kanji_string[piece[i]]);
-	else
-	  if ( !same_rank ) 
-	    fprintf( fd,"│\e[43m⇩%s\e[0m", upper_kanji_string[piece[i]]);
-	  else
-	    fprintf( fd,"│\e[43m⇩%s\e[0m", lower_kanji_string[piece[i]]);
- 
-     } else {
-	if ( i %RANKS == 0 )
-	  if ( !same_rank )
-	    fprintf( fd,"║⇩%s", upper_kanji_string[piece[i]]);
-	  else
-	    fprintf( fd,"║⇩%s", lower_kanji_string[piece[i]]);
-	else
-	  if ( !same_rank )
-	    fprintf( fd,"│⇩%s", upper_kanji_string[piece[i]]);
-	  else
-	    fprintf( fd,"│⇩%s", lower_kanji_string[piece[i]]);
-      }
-      break;
-    }
-    if ((i + 1) % RANKS == 0 && i != LASTSQUARE ) {
-      if ( annotate && undos && (j <= undos )) {
-	if ( same_rank ) {
-	  fprintf( fd,"║ %c  %d. %s\n", 'a' + GetRank(i), j, move_str(undo_dat[j-1].m.b));
-	  j++;
-	  if ( undos && (j <= undos )) {
-	    fprintf( fd, "  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢    %d. %s \n%c ",
-		   j, move_str(undo_dat[j-1].m.b), 'b' + GetRank(i));
+      if ((i + 1) % RANKS == 1 && i != 0 ) {
+	if ( annotate && undos && (j <= undos )) {
+	  if ( same_rank ) {
+	    fprintf( fd,"║ %c  %d. %s\n", 'a' + GetRank(i) - 1, j, move_str(undo_dat[j-1].m.b));
 	    j++;
+	    if ( undos && (j <= undos )) {
+	      fprintf( fd, "  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢    %d. %s \n%c ",
+		       j, move_str(undo_dat[j-1].m.b), 'b' + GetRank(i) - 1);
+	      j++;
+	    } else {
+	      fprintf( fd, "  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ",
+		       'b' + GetRank(i) - 1);
+	    }
+	    same_rank = FALSE;
 	  } else {
-	    fprintf( fd, "  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ",
-		     'b' + GetRank(i));
+	    fprintf( fd, "║    %d. %s \n  ", j, move_str(undo_dat[j-1].m.b)); 
+	    i-=16;
+	    same_rank = TRUE;
+	    j++;
 	  }
-	  same_rank = FALSE;
-	} else {
-	  fprintf( fd, "║    %d. %s \n  ", j, move_str(undo_dat[j-1].m.b)); 
-	  i-=16;
-	  same_rank = TRUE;
-	  j++;
-	}
-
-	if (( i == LASTSQUARE )&& !same_rank) {
-	  fprintf( fd, "║    %d. %s \n%c ", j, move_str(undo_dat[j-1].m.b), 'b' + GetRank(i)); 
-	  i-=16;
-	  same_rank = TRUE;
-	  j++;
-	}
-
-      } else { /* if annotate && undos && j <= undos */
-	if ( same_rank ) {
-	  fprintf( fd,"║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
-	  same_rank = FALSE;
-	} else {
-	  fprintf( fd, "║\n  ");
-	  i-=16;
-	  same_rank = TRUE;
+	  
+	  if (( i == LASTSQUARE )&& !same_rank) {
+	    fprintf( fd, "║    %d. %s \n%c ", j, move_str(undo_dat[j-1].m.b), 'b' + GetRank(i) - 1); 
+	    i-=16;
+	    same_rank = TRUE;
+	    j++;
+	  }
+	  
+	} else { /* if annotate && undos && j <= undos */
+	  if ( same_rank ) {
+	    fprintf( fd,"║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
+	    same_rank = FALSE;
+	  } else {
+	    fprintf( fd, "║\n  ");
+	    i-=16;
+	    same_rank = TRUE;
+	  }
 	}
       }
+      if (( i == LASTSQUARE )&& !same_rank) {
+	fprintf( fd, "║\n  ");
+	i-=16;
+	same_rank = TRUE;	
+      }
     }
-    if (( i == LASTSQUARE )&& !same_rank) {
-      fprintf( fd, "║\n  ");
-      i-=16;
-      same_rank = TRUE;	
+    
+    fprintf( fd,"\e[0m║ a\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n");
+    fprintf( fd,"   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15  16\n");
+  } else { /* not rotated */
+    fprintf( fd,"\e[0m\n\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n");
+    fprintf( fd,"  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\na ");
+    for (i = 0; i < NUMSQUARES; ++i) {
+      switch (color[i]) {
+      case EMPTY:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 0 )
+	    fprintf( fd, "║\e[43m   \e[0m");
+	  else
+	    fprintf( fd, "│\e[43m   \e[0m");
+	} else {
+	  if ( i % RANKS == 0 )
+	    fprintf( fd,"║   ");
+	else
+	  fprintf( fd,"│   ");
+	}
+	break;
+      case LIGHT:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 0 )
+	    if ( !same_rank )
+	      fprintf( fd,"║\e[43m↑\e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+	    else
+	      fprintf( fd,"║\e[43m↑\e[1m%s\e[0m", lower_kanji_string[piece[i]]);
+	  else
+	    if ( !same_rank ) 
+	      fprintf( fd,"│\e[43m↑\e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+	  else
+	    fprintf( fd,"│\e[43m↑\e[1m%s\e[0m", lower_kanji_string[piece[i]]);
+	} else {
+	  if ( i %RANKS == 0 )
+	    if ( !same_rank )
+	      fprintf( fd,"║\e[1m↑%s\e[0m", upper_kanji_string[piece[i]]);
+	    else
+	      fprintf( fd,"║\e[1m↑%s\e[0m", lower_kanji_string[piece[i]]);
+	  else
+	    if ( !same_rank )
+	      fprintf( fd,"│\e[1m↑%s\e[0m", upper_kanji_string[piece[i]]);
+	    else
+	      fprintf( fd,"│\e[1m↑%s\e[0m", lower_kanji_string[piece[i]]);
+	}
+	break;
+      case DARK:
+	if (( i == from_square )||( i == to_square )) {
+	  if ( i %RANKS == 0 )
+	    if ( !same_rank )
+	      fprintf( fd,"║\e[43m⇩%s\e[0m", upper_kanji_string[piece[i]]);
+	    else
+	      fprintf( fd,"║\e[43m⇩%s\e[0m", lower_kanji_string[piece[i]]);
+	  else
+	    if ( !same_rank ) 
+	      fprintf( fd,"│\e[43m⇩%s\e[0m", upper_kanji_string[piece[i]]);
+	    else
+	      fprintf( fd,"│\e[43m⇩%s\e[0m", lower_kanji_string[piece[i]]);
+	  
+	} else {
+	  if ( i %RANKS == 0 )
+	    if ( !same_rank )
+	      fprintf( fd,"║⇩%s", upper_kanji_string[piece[i]]);
+	    else
+	      fprintf( fd,"║⇩%s", lower_kanji_string[piece[i]]);
+	  else
+	    if ( !same_rank )
+	      fprintf( fd,"│⇩%s", upper_kanji_string[piece[i]]);
+	    else
+	      fprintf( fd,"│⇩%s", lower_kanji_string[piece[i]]);
+	}
+	break;
+      }
+      if ((i + 1) % RANKS == 0 && i != LASTSQUARE ) {
+	if ( annotate && undos && (j <= undos )) {
+	  if ( same_rank ) {
+	    fprintf( fd,"║ %c  %d. %s\n", 'a' + GetRank(i), j, move_str(undo_dat[j-1].m.b));
+	    j++;
+	    if ( undos && (j <= undos )) {
+	      fprintf( fd, "  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢    %d. %s \n%c ",
+		       j, move_str(undo_dat[j-1].m.b), 'b' + GetRank(i));
+	      j++;
+	    } else {
+	      fprintf( fd, "  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ",
+		       'b' + GetRank(i));
+	    }
+	    same_rank = FALSE;
+	  } else {
+	    fprintf( fd, "║    %d. %s \n  ", j, move_str(undo_dat[j-1].m.b)); 
+	    i-=16;
+	    same_rank = TRUE;
+	    j++;
+	  }
+	  
+	  if (( i == LASTSQUARE )&& !same_rank) {
+	    fprintf( fd, "║    %d. %s \n%c ", j, move_str(undo_dat[j-1].m.b), 'b' + GetRank(i)); 
+	    i-=16;
+	    same_rank = TRUE;
+	    j++;
+	  }
+	  
+	} else { /* if annotate && undos && j <= undos */
+	  if ( same_rank ) {
+	    fprintf( fd,"║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
+	    same_rank = FALSE;
+	  } else {
+	    fprintf( fd, "║\n  ");
+	    i-=16;
+	    same_rank = TRUE;
+	  }
+	}
+      }
+      if (( i == LASTSQUARE )&& !same_rank) {
+	fprintf( fd, "║\n  ");
+	i-=16;
+	same_rank = TRUE;	
+      }
     }
+    
+    fprintf( fd,"║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
   }
-
-  fprintf( fd,"║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
-
   if ( undos ) {
-    if ( undo_dat[undos-1].m.b.over != EMPTY ) {
-      fprintf( fd,"%s to move (last move %d: %s%s from %d%c over %d%c to %d%c)\n", 
-	       side_name[side],undos, upper_kanji_string[undo_dat[undos-1].oldpiece],
-	       lower_kanji_string[undo_dat[undos-1].oldpiece],
-	       16 - GetFile(undo_dat[undos-1].m.b.from), undo_dat[undos-1].m.b.from/16 + 'a', 
-	       16 - GetFile(undo_dat[undos-1].m.b.over),  undo_dat[undos-1].m.b.over/16 + 'a', 
-	       16 - GetFile(undo_dat[undos-1].m.b.to), undo_dat[undos-1].m.b.to/16 + 'a');
-    } else {      
-      fprintf( fd,"%s to move (last move %d: %s%s from %d%c to %d%c)\n", 
-	       side_name[side],undos, 
-	       upper_kanji_string[undo_dat[undos-1].oldpiece],
-	       lower_kanji_string[undo_dat[undos-1].oldpiece],
-	       16 - GetFile(undo_dat[undos-1].m.b.from), GetRank(undo_dat[undos-1].m.b.from) + 'a', 
-	       16 - GetFile(undo_dat[undos-1].m.b.to),  GetRank(undo_dat[undos-1].m.b.to) + 'a');
-    }
+    fprintf( fd, "%s to move (last move: %d. %s)\n",
+	     side_name[side], undos, move_str(undo_dat[undos-1].m.b));
   } else {
     fprintf( fd,"%s to move\n", 
 	     side_name[side]);

@@ -219,6 +219,9 @@ extern int piece_value[PIECE_TYPES+1];
 
 extern BOOL search_quiesce;
 
+extern BOOL rotated;
+/* TRUE if board is rotated */
+
 extern BOOL loaded_position;
 /* TRUE if position is loaded from a file, not played from the 
    initial position */

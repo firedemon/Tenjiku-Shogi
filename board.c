@@ -1379,21 +1379,30 @@ void gen_push(int from, int to, int bits)
 	g->m.b.burned_pieces = '0';
 
 	if (( piece[from] == FIRE_DEMON ) || ( piece[from] == PFIRE_DEMON )) {
+#ifdef DEBUG
+	      fprintf(stderr,"b: %d%c-%d%c:", 16 - GetFile(from),
+		      GetRank(from) + 'a',
+		      16 - GetFile(to),
+		      GetRank(to) + 'a');
+#endif
 	  g->m.b.bits |= 64;
 	  for (i = 0; i < 8; i++) {
-	    k = to + lion_single_steps[i];
-	    if (( k < 0 ) || ( k >= NUMSQUARES )){
-	      continue;
-	      /* fprintf(stderr,"#gen_push from %d to %d, burning %d\n",
-		 from, to, k); */
-	    }
-	    n = mailbox256[to + lion_single_steps[i]];
-	    if (( n >= 0 ) && (n < NUMSQUARES) && 
-		(piece[k] != EMPTY) && ( color[k] == xside )) {
-	      g->score += piece[to];
+	    n = mailbox[mailbox256[to] + lion_single_steps[i]];
+	    if ( n != -1 && (piece[n] != EMPTY) && ( color[n] == xside )) {
+	      g->score += piece[n];
 	      g->m.b.burned_pieces ++;
+#ifdef DEBUG
+	      fprintf(stderr,"%s%d%c",
+		      piece_string[piece[n]],
+		      16 - GetFile(n),
+		      GetRank(n) +'a');
+
+#endif
 	    }
 	  }
+#ifdef DEBUG
+	  fprintf(stderr,"\n");
+#endif
 	}
 	if (bits & 16) {
 	  i = promotion[ piece[from ] ];

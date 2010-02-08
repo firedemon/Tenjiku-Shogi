@@ -1,5 +1,9 @@
 --------------------- CHANGELOG ----------------------
 Latest changes:
+2010.02.08
+- fixed burning counter for FiD moves (fixed severe bug in gen_push())
+- added support for rotating the board (ascii, kanji works, fullkanji mode is a mess)
+
 2010.02.07
 - fixed kifu to show the last 30 moves, not the first 30
 - added burning counter to FiD moves

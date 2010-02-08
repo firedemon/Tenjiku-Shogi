@@ -1,6 +1,7 @@
 ---------------------- TODO -------------------------
 
 to fix:
+- fix rotating for fullkanji mode (pieces, board, arrowheads)
 - spurious "Illegal move" on eof
 - identifymove doesn't always find the correct move (sometimes leads to pieces changing their color) seems like move still gets onto redo stack, but not on undo
 - clear up show_moves (done) and show_influence
@@ -20,8 +21,8 @@ to add:
 - keep track of material (done)
 - add burning pieces to move_str (done)
 - burn information should go into move_bits (done)
+- make board turnable (mostly done)
 
-- make board turnable
 - make colors etc. configurable
 - rewrite input parser
 - network option

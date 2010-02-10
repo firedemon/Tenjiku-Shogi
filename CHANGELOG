@@ -1,5 +1,8 @@
 --------------------- CHANGELOG ----------------------
 Latest changes:
+2010.02.09
+- rotating now works for fullkanji as well
+
 2010.02.08
 - fixed burning counter for FiD moves (fixed severe bug in gen_push())
 - added support for rotating the board (ascii, kanji works, fullkanji mode is a mess)

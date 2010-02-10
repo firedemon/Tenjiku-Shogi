@@ -309,7 +309,7 @@ int main(int argc,  char **argv)
 		  print_board( stdout );
 		  continue;
 		}
-		if (!strcmp(s, "rotated") || !strcmp(s,"r")) {
+		if (!strcmp(s, "rotate") || !strcmp(s,"R")) {
 		  if ( !rotated ) 
 		    rotated = TRUE;
 		  else
@@ -561,12 +561,14 @@ int main(int argc,  char **argv)
 			printf("tame - (notame) starts a new game, FiD only burns when it doesn't capture (E.Werner)\n");
 			printf("verytame - (notame) starts a new game, FiD only burns, but doesn't capture (E.Werner)\n");
 			printf("fid - starts a new game, only FiD suicide only burns own FiD (TSA rule, default)\n");
-			printf("------------ I/O ----------------\n");
+			printf("------------ Display ----------------\n");
 			printf("create - create a new opening file - please read the comments in book.dat!\n");
-			printf("d - display the board\n");
-			printf("ascii - display simple ascii board\n");
+			printf("d - display the board again\n");
+			printf("rotate/R - rotate the board and display\n");
+			printf("ascii - display ascii board\n");
 			printf("kanji - display kanji board with one kanji per piece\n");
 			printf("fullkanji - display kanji board with two kanjis per piece\n");
+			printf("------------ File I/O ----------------\n");
 			printf("l(oad) - load a game file\n");
 			/* printf("replay - load a game file and replay game\n"); */
 			printf("s(ave) - save the current game to a file\n");
@@ -1412,7 +1414,7 @@ void full_kanji_print_board( FILE *fd )
   }
   if ( rotated ) {
     fprintf( fd,"   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15  16\n");
-    fprintf( fd,"  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\n ");
+    fprintf( fd,"  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\np ");
     for (i =  NUMSQUARES - 1; i>=0 ; i--) {
       switch (color[i]) {
       case EMPTY:
@@ -1432,96 +1434,96 @@ void full_kanji_print_board( FILE *fd )
 	if (( i == from_square )||( i == to_square )) {
 	  if ( i %RANKS == 15 )
 	    if ( !same_rank )
-	      fprintf( fd,"║\e[43m↑\e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+	      fprintf( fd,"║\e[43m↓\e[1m%s\e[0m", upper_kanji_string[piece[i]]);
 	    else
-	      fprintf( fd,"║\e[43m↑\e[1m%s\e[0m", lower_kanji_string[piece[i]]);
+	      fprintf( fd,"║\e[43m↓\e[1m%s\e[0m", lower_kanji_string[piece[i]]);
 	  else
 	    if ( !same_rank ) 
-	      fprintf( fd,"│\e[43m↑\e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+	      fprintf( fd,"│\e[43m↓\e[1m%s\e[0m", upper_kanji_string[piece[i]]);
 	  else
-	    fprintf( fd,"│\e[43m↑\e[1m%s\e[0m", lower_kanji_string[piece[i]]);
+	    fprintf( fd,"│\e[43m↓\e[1m%s\e[0m", lower_kanji_string[piece[i]]);
 	} else {
 	  if ( i %RANKS == 15 )
 	    if ( !same_rank )
-	      fprintf( fd,"║\e[1m↑%s\e[0m", upper_kanji_string[piece[i]]);
+	      fprintf( fd,"║\e[1m↓%s\e[0m", upper_kanji_string[piece[i]]);
 	    else
-	      fprintf( fd,"║\e[1m↑%s\e[0m", lower_kanji_string[piece[i]]);
+	      fprintf( fd,"║\e[1m↓%s\e[0m", lower_kanji_string[piece[i]]);
 	  else
 	    if ( !same_rank )
-	      fprintf( fd,"│\e[1m↑%s\e[0m", upper_kanji_string[piece[i]]);
+	      fprintf( fd,"│\e[1m↓%s\e[0m", upper_kanji_string[piece[i]]);
 	    else
-	      fprintf( fd,"│\e[1m↑%s\e[0m", lower_kanji_string[piece[i]]);
+	      fprintf( fd,"│\e[1m↓%s\e[0m", lower_kanji_string[piece[i]]);
 	}
 	break;
       case DARK:
 	if (( i == from_square )||( i == to_square )) {
 	  if ( i %RANKS == 15 )
 	    if ( !same_rank )
-	      fprintf( fd,"║\e[43m⇩%s\e[0m", upper_kanji_string[piece[i]]);
+	      fprintf( fd,"║\e[43m⇑%s\e[0m", upper_kanji_string[piece[i]]);
 	    else
-	      fprintf( fd,"║\e[43m⇩%s\e[0m", lower_kanji_string[piece[i]]);
+	      fprintf( fd,"║\e[43m⇑%s\e[0m", lower_kanji_string[piece[i]]);
 	  else
 	    if ( !same_rank ) 
-	      fprintf( fd,"│\e[43m⇩%s\e[0m", upper_kanji_string[piece[i]]);
+	      fprintf( fd,"│\e[43m⇑%s\e[0m", upper_kanji_string[piece[i]]);
 	    else
-	      fprintf( fd,"│\e[43m⇩%s\e[0m", lower_kanji_string[piece[i]]);
+	      fprintf( fd,"│\e[43m⇑%s\e[0m", lower_kanji_string[piece[i]]);
 	  
 	} else {
 	  if ( i %RANKS == 15 )
 	    if ( !same_rank )
-	      fprintf( fd,"║⇩%s", upper_kanji_string[piece[i]]);
+	      fprintf( fd,"║⇑%s", upper_kanji_string[piece[i]]);
 	    else
-	      fprintf( fd,"║⇩%s", lower_kanji_string[piece[i]]);
+	      fprintf( fd,"║⇑%s", lower_kanji_string[piece[i]]);
 	  else
 	    if ( !same_rank )
-	      fprintf( fd,"│⇩%s", upper_kanji_string[piece[i]]);
+	      fprintf( fd,"│⇑%s", upper_kanji_string[piece[i]]);
 	    else
-	      fprintf( fd,"│⇩%s", lower_kanji_string[piece[i]]);
+	      fprintf( fd,"│⇑%s", lower_kanji_string[piece[i]]);
 	}
 	break;
       }
       if ((i + 1) % RANKS == 1 && i != 0 ) {
 	if ( annotate && undos && (j <= undos )) {
 	  if ( same_rank ) {
-	    fprintf( fd,"║ %c  %d. %s\n", 'a' + GetRank(i) - 1, j, move_str(undo_dat[j-1].m.b));
+	    fprintf( fd,"║ %c  %d. %s\n", 'a' + GetRank(i), j, move_str(undo_dat[j-1].m.b));
 	    j++;
 	    if ( undos && (j <= undos )) {
 	      fprintf( fd, "  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢    %d. %s \n%c ",
-		       j, move_str(undo_dat[j-1].m.b), 'b' + GetRank(i) - 1);
+		       j, move_str(undo_dat[j-1].m.b), 'a' + GetRank(i) - 1);
 	      j++;
 	    } else {
 	      fprintf( fd, "  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ",
-		       'b' + GetRank(i) - 1);
+		       'a' + GetRank(i) - 1);
 	    }
 	    same_rank = FALSE;
 	  } else {
 	    fprintf( fd, "║    %d. %s \n  ", j, move_str(undo_dat[j-1].m.b)); 
-	    i-=16;
+	    i+=16;
 	    same_rank = TRUE;
 	    j++;
 	  }
 	  
-	  if (( i == LASTSQUARE )&& !same_rank) {
-	    fprintf( fd, "║    %d. %s \n%c ", j, move_str(undo_dat[j-1].m.b), 'b' + GetRank(i) - 1); 
-	    i-=16;
+	  if (( i == 0 )&& !same_rank) {
+	    fprintf( fd, "║    %d. %s \n%c ", j, move_str(undo_dat[j-1].m.b), 'a' + GetRank(i) - 1); 
+	    i+=16;
 	    same_rank = TRUE;
 	    j++;
 	  }
 	  
 	} else { /* if annotate && undos && j <= undos */
 	  if ( same_rank ) {
-	    fprintf( fd,"║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
+	    fprintf( fd,"║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'a' + GetRank(i) -1); 
 	    same_rank = FALSE;
 	  } else {
 	    fprintf( fd, "║\n  ");
-	    i-=16;
+	    i+=16;
 	    same_rank = TRUE;
 	  }
 	}
       }
-      if (( i == LASTSQUARE )&& !same_rank) {
+      if (( i == 0 )&& !same_rank) {
 	fprintf( fd, "║\n  ");
-	i-=16;
+	i+=16;
 	same_rank = TRUE;	
       }
     }
@@ -2305,216 +2307,310 @@ void show_moves( void ) {
 
   printf("\n All moves.\n");
   /* now print the variant board */
-  if ( fullkanji ) {
-        printf(  "\e[0m\n\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n");
-    printf(  "  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\na ");
-    for (i = 0; i < NUMSQUARES; ++i) {
-      if ( var_board[i] ) {
-	switch (color[i]) {
-	case EMPTY:
+  if ( rotated ) {
+    if ( fullkanji ) {
+      printf("   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15  16\n");
+      printf("  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\np ");
+      for (i =  NUMSQUARES - 1; i>=0 ; i--) {
+	if ( var_board[i] ) {
+	  switch (color[i]) {
+	  case EMPTY:
+	    if ( i %RANKS == 15 )
+	      printf( "║\e[43m   \e[0m");
+	    else
+	      printf( "│\e[43m   \e[0m");
+	    break;
+	  case LIGHT:
+	    if ( i %RANKS == 15 )
+	      if ( !same_rank )
+		  printf("║\e[1m↓%s\e[0m", upper_kanji_string[piece[i]]);
+		else
+		  printf("║\e[1m↓%s\e[0m", lower_kanji_string[piece[i]]);
+	      else
+		if ( !same_rank )
+		  printf("│\e[1m↓%s\e[0m", upper_kanji_string[piece[i]]);
+		else
+		  printf("│\e[1m↓%s\e[0m", lower_kanji_string[piece[i]]);
+	    break;
+	  case DARK:
+	    if ( i %RANKS == 15 )
+	      if ( !same_rank )
+		printf("║\e[43m⇑%s\e[0m", upper_kanji_string[piece[i]]);
+	      else
+		printf("║\e[43m⇑%s\e[0m", lower_kanji_string[piece[i]]);
+	    else
+	      if ( !same_rank ) 
+		printf("│\e[43m⇑%s\e[0m", upper_kanji_string[piece[i]]);
+	      else
+		printf("│\e[43m⇑%s\e[0m", lower_kanji_string[piece[i]]);
+	    break;
+	  }	
+	  if ((i + 1) % RANKS == 1 && i != 0 ) {
+	    if ( annotate && undos && (j <= undos )) {
+	      if ( same_rank ) {
+		printf("║ %c  %d. %s\n", 'a' + GetRank(i) - 1, j, move_str(undo_dat[j-1].m.b));
+		j++;
+		if ( undos && (j <= undos )) {
+		  printf( "  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢    %d. %s \n%c ",
+			  j, move_str(undo_dat[j-1].m.b), 'b' + GetRank(i) - 1);
+		  j++;
+		} else {
+		  printf( "  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ",
+			  'b' + GetRank(i) - 1);
+		}
+		same_rank = FALSE;
+	      } else {
+		printf( "║    %d. %s \n  ", j, move_str(undo_dat[j-1].m.b)); 
+		i+=16;
+		same_rank = TRUE;
+		j++;
+	      }
+	      
+	      if (( i == 0 )&& !same_rank) {
+		printf( "║    %d. %s \n%c ", j, move_str(undo_dat[j-1].m.b), 'b' + GetRank(i) - 1); 
+		i+=16;
+		same_rank = TRUE;
+		j++;
+	      } 
+	    } else { /* if annotate && undos && j <= undos */
+	      if ( same_rank ) {
+		printf("║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
+		same_rank = FALSE;
+	      } else {
+		printf( "║\n  ");
+		i+=16;
+		same_rank = TRUE;
+	      }
+	    }
+	  }
+	  if (( i == 0 )&& !same_rank) {
+	    printf( "║\n  ");
+	    i+=16;
+	    same_rank = TRUE;	
+	  }
+	} else { /* if var_board[i] */
+	  ;
+	}
+      } /* for i to NUMSQUARES */
+      printf("\e[0m║ a\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n");
+      printf("   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15  16\n");
+    } else if ( kanji ) {
+      ;
+    } else { /* ascii */
+      ;
+    }
+  } else {
+    if ( fullkanji ) {
+      printf(  "\e[0m\n\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n");
+      printf(  "  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\na ");
+      for (i = 0; i < NUMSQUARES; ++i) {
+	if ( var_board[i] ) {
+	  switch (color[i]) {
+	  case EMPTY:
 	  if ( i % RANKS == 0 )
 	    printf( "║%s   \e[0m", color_string[var_board[i]]);
 	  else
 	    printf( "│%s   \e[0m", color_string[var_board[i]]);
 	  break;
-	case LIGHT:
-	  if ( i %RANKS == 0 )
-	    if ( !same_rank )
-	      printf( "║%s\e[1m %s\e[0m", color_string[var_board[i]], upper_kanji_string[piece[i]]);
+	  case LIGHT:
+	    if ( i %RANKS == 0 )
+	      if ( !same_rank )
+		printf( "║%s\e[1m %s\e[0m", color_string[var_board[i]], upper_kanji_string[piece[i]]);
+	      else
+		printf( "║%s\e[1m %s\e[0m", color_string[var_board[i]], lower_kanji_string[piece[i]]);
 	    else
-	      printf( "║%s\e[1m %s\e[0m", color_string[var_board[i]], lower_kanji_string[piece[i]]);
-	  else
-	    if ( !same_rank )
-	      printf( "│%s\e[1m %s\e[0m", color_string[var_board[i]], upper_kanji_string[piece[i]]);
+	      if ( !same_rank )
+		printf( "│%s\e[1m %s\e[0m", color_string[var_board[i]], upper_kanji_string[piece[i]]);
+	      else
+		printf( "│%s\e[1m %s\e[0m", color_string[var_board[i]], lower_kanji_string[piece[i]]);
+	    break;
+	  case DARK:
+	    if ( i %RANKS == 0 )
+	      if ( !same_rank )
+		printf( "║%s %s\e[0m", color_string[var_board[i]], upper_kanji_string[piece[i]]);
+	      else
+		printf( "║%s %s\e[0m", color_string[var_board[i]], lower_kanji_string[piece[i]]);
 	    else
-	      printf( "│%s\e[1m %s\e[0m", color_string[var_board[i]], lower_kanji_string[piece[i]]);
-	  break;
-	case DARK:
-	  if ( i %RANKS == 0 )
-	    if ( !same_rank )
-	      printf( "║%s %s\e[0m", color_string[var_board[i]], upper_kanji_string[piece[i]]);
-	    else
-	      printf( "║%s %s\e[0m", color_string[var_board[i]], lower_kanji_string[piece[i]]);
-	  else
-	    if ( !same_rank )
-	      printf( "│%s %s\e[0m", color_string[var_board[i]], upper_kanji_string[piece[i]]);
-	    else
-	      printf( "│%s %s\e[0m", color_string[var_board[i]], lower_kanji_string[piece[i]]);
-	  break;
-	}
-	if ((i + 1) % RANKS == 0 && i != LASTSQUARE ) {
-	  if ( same_rank ) {
-	    printf( "║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
-	    same_rank = FALSE;
-	  } else {
-	    printf(  "║\n  ");
-	  i-=16;
-	  same_rank = TRUE;
+	      if ( !same_rank )
+		printf( "│%s %s\e[0m", color_string[var_board[i]], upper_kanji_string[piece[i]]);
+	      else
+		printf( "│%s %s\e[0m", color_string[var_board[i]], lower_kanji_string[piece[i]]);
+	    break;
 	  }
-	}
-	if (( i == LASTSQUARE )&& !same_rank) {
-	  printf(  "║\n  ");
-	  i-=16;
-	  same_rank = TRUE;	
-	}
-      } else { /* if var_board[i] */
-	switch (color[i]) {
-	case EMPTY:
-	  if ( i % RANKS == 0 )
-	    printf( "║   ");
-	  else
-	    printf( "│   ");
-	  break;
-	case LIGHT:
-	  if ( i %RANKS == 0 )
-	    if ( !same_rank )
-	      printf( "║ \e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+	  if ((i + 1) % RANKS == 0 && i != LASTSQUARE ) {
+	    if ( same_rank ) {
+	      printf( "║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
+	      same_rank = FALSE;
+	    } else {
+	      printf(  "║\n  ");
+	      i-=16;
+	      same_rank = TRUE;
+	    }
+	  }
+	  if (( i == LASTSQUARE )&& !same_rank) {
+	    printf(  "║\n  ");
+	    i-=16;
+	    same_rank = TRUE;	
+	  }
+	} else { /* if var_board[i] */
+	  switch (color[i]) {
+	  case EMPTY:
+	    if ( i % RANKS == 0 )
+	      printf( "║   ");
 	    else
-	      printf( "║ \e[1m%s\e[0m", lower_kanji_string[piece[i]]);
-	  else
-	    if ( !same_rank )
-	      printf( "│ \e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+	      printf( "│   ");
+	    break;
+	  case LIGHT:
+	    if ( i %RANKS == 0 )
+	      if ( !same_rank )
+		printf( "║ \e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+	      else
+		printf( "║ \e[1m%s\e[0m", lower_kanji_string[piece[i]]);
+	    else
+	      if ( !same_rank )
+		printf( "│ \e[1m%s\e[0m", upper_kanji_string[piece[i]]);
 	    else
 	      printf( "│ \e[1m%s\e[0m", lower_kanji_string[piece[i]]);
-	  break;
-	case DARK:
-	  if ( i %RANKS == 0 )
-	    if ( !same_rank )
-	      printf( "║ %s", upper_kanji_string[piece[i]]);
+	    break;
+	  case DARK:
+	    if ( i %RANKS == 0 )
+	      if ( !same_rank )
+		printf( "║ %s", upper_kanji_string[piece[i]]);
+	      else
+		printf( "║ %s", lower_kanji_string[piece[i]]);
 	    else
-	      printf( "║ %s", lower_kanji_string[piece[i]]);
-	  else
-	    if ( !same_rank )
-	      printf( "│ %s", upper_kanji_string[piece[i]]);
-	    else
-	      printf( "│ %s", lower_kanji_string[piece[i]]);
-	  break;
-	}
-	if ((i + 1) % RANKS == 0 && i != LASTSQUARE ) {
-	  if ( same_rank ) {
-	    printf( "║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
-	    same_rank = FALSE;
-	  } else {
+	      if ( !same_rank )
+		printf( "│ %s", upper_kanji_string[piece[i]]);
+	      else
+		printf( "│ %s", lower_kanji_string[piece[i]]);
+	    break;
+	  }
+	  if ((i + 1) % RANKS == 0 && i != LASTSQUARE ) {
+	    if ( same_rank ) {
+	      printf( "║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
+	      same_rank = FALSE;
+	    } else {
+	      printf(  "║\n  ");
+	      i-=16;
+	      same_rank = TRUE;
+	    }
+	  }
+	  if (( i == LASTSQUARE )&& !same_rank) {
 	    printf(  "║\n  ");
-	  i-=16;
-	  same_rank = TRUE;
+	    i-=16;
+	    same_rank = TRUE;	
 	  }
 	}
-	if (( i == LASTSQUARE )&& !same_rank) {
-	  printf(  "║\n  ");
-	  i-=16;
-	  same_rank = TRUE;	
-	}
       }
-    }
-    printf( "║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
-  } else if ( kanji ) {
-    printf("\n\n   16  15  14  13  12  11  10  9    8   7   6   5   4   3   2   1\n");
-    printf(  "  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\na ");
-    for (i = 0; i < NUMSQUARES; ++i) {
-      if ( var_board[i] ) {
-	switch (color[i]) {
-	case EMPTY:
-	  if ( i % RANKS == 0 )
-	    printf( "║%s   \e[0m", color_string[var_board[i]]);
+      printf( "║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
+    } else if ( kanji ) {
+      printf("\n\n   16  15  14  13  12  11  10  9    8   7   6   5   4   3   2   1\n");
+      printf(  "  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\na ");
+      for (i = 0; i < NUMSQUARES; ++i) {
+	if ( var_board[i] ) {
+	  switch (color[i]) {
+	  case EMPTY:
+	    if ( i % RANKS == 0 )
+	      printf( "║%s   \e[0m", color_string[var_board[i]]);
 	    else
-	    printf( "│%s   \e[0m", color_string[var_board[i]]);
-	  break;
-	case LIGHT:
-	  if ( i % RANKS == 0 )
-	    printf("║%s\e[1m%s\e[0m", 
-		   color_string[var_board[i]], kanji_piece_string[piece[i]]);
-	  else
-	    printf("│%s\e[1m%s\e[0m", 
-		   color_string[var_board[i]], kanji_piece_string[piece[i]]);
-	  break;
-	case DARK:
-	  if ( i % RANKS == 0 )
-	    printf("║%s%s\e[0m", 
-		   color_string[var_board[i]], kanji_piece_string[piece[i]]);
-	  else
-	    printf("│%s%s\e[0m", color_string[var_board[i]], 
-		   kanji_piece_string[piece[i]]);
-	  break;	
+	      printf( "│%s   \e[0m", color_string[var_board[i]]);
+	    break;
+	  case LIGHT:
+	    if ( i % RANKS == 0 )
+	      printf("║%s\e[1m%s\e[0m", 
+		     color_string[var_board[i]], kanji_piece_string[piece[i]]);
+	    else
+	      printf("│%s\e[1m%s\e[0m", 
+		     color_string[var_board[i]], kanji_piece_string[piece[i]]);
+	    break;
+	  case DARK:
+	    if ( i % RANKS == 0 )
+	      printf("║%s%s\e[0m", 
+		     color_string[var_board[i]], kanji_piece_string[piece[i]]);
+	    else
+	      printf("│%s%s\e[0m", color_string[var_board[i]], 
+		     kanji_piece_string[piece[i]]);
+	    break;	
+	  }
+	} else {
+	  switch (color[i]) {
+	  case EMPTY:
+	    if ( i % RANKS == 0 )
+	      printf("║   ");
+	    else
+	      printf("│   ");
+	    break;
+	  case LIGHT:
+	    if ( i % RANKS == 0 )
+	      printf("║\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	    else
+	      printf("│\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	    break;
+	  case DARK:
+	    if ( i % RANKS == 0 )
+	      printf("║%s", kanji_piece_string[piece[i]]);
+	    else
+	      printf("│%s", kanji_piece_string[piece[i]]);
+	    break;
+	  }
 	}
-      } else {
-	switch (color[i]) {
-	case EMPTY:
-	  if ( i % RANKS == 0 )
-	    printf("║   ");
-	  else
-	    printf("│   ");
-	  break;
-	case LIGHT:
-	  if ( i % RANKS == 0 )
-	    printf("║\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
-	  else
-	    printf("│\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
-	  break;
-	case DARK:
-	  if ( i % RANKS == 0 )
-	    printf("║%s", kanji_piece_string[piece[i]]);
-	  else
-	    printf("│%s", kanji_piece_string[piece[i]]);
-	  break;
-	}
+	if ((i + 1) % RANKS == 0 && i != LASTSQUARE)
+	  printf( "║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
       }
-      if ((i + 1) % RANKS == 0 && i != LASTSQUARE)
-	    printf( "║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
-    }
-    printf( "║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
-  } else { /* ascii board */
-    printf("\n\n   16  15  14  13  12  11  10  9    8   7   6   5   4   3   2   1\n");
-    printf(  "  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\na ");
-    for (i = 0; i < NUMSQUARES; ++i) {
-      if ( var_board[i] ) {
-	switch (color[i]) {
-	case EMPTY:
-	  if ( i % RANKS == 0 )
-	    printf("║%s   \e[0m", color_string[var_board[i]]); 
-	  else
-	    printf("│%s   \e[0m", color_string[var_board[i]]); 
-	  break;
-	case LIGHT:
-	  if ( i % RANKS == 0 )
-	    printf("║%s\e[1m%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
-	  else
-	    printf("│%s\e[1m%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
-	  break;
-	case DARK:
-	  if ( i % RANKS == 0 )
-	    printf("║%s%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
-	  else
-	    printf("│%s%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
-	  break;	
+      printf( "║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
+    } else { /* ascii board */
+      printf("\n\n   16  15  14  13  12  11  10  9    8   7   6   5   4   3   2   1\n");
+      printf(  "  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\na ");
+      for (i = 0; i < NUMSQUARES; ++i) {
+	if ( var_board[i] ) {
+	  switch (color[i]) {
+	  case EMPTY:
+	    if ( i % RANKS == 0 )
+	      printf("║%s   \e[0m", color_string[var_board[i]]); 
+	    else
+	      printf("│%s   \e[0m", color_string[var_board[i]]); 
+	    break;
+	  case LIGHT:
+	    if ( i % RANKS == 0 )
+	      printf("║%s\e[1m%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
+	    else
+	      printf("│%s\e[1m%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
+	    break;
+	  case DARK:
+	    if ( i % RANKS == 0 )
+	      printf("║%s%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
+	    else
+	      printf("│%s%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
+	    break;	
+	  }
+	} else {
+	  switch (color[i]) {
+	  case EMPTY:
+	    if ( i % RANKS == 0 )
+	      printf("║   ");
+	    else
+	      printf("│   ");
+	    break;
+	  case LIGHT:
+	    if ( i % RANKS == 0 )
+	      printf("║\e[1m%s\e[0m", piece_string[piece[i]]);
+	    else
+	      printf("│\e[1m%s\e[0m", piece_string[piece[i]]);
+	    break;
+	  case DARK:
+	    if ( i % RANKS == 0 )
+	      printf("║%s", piece_string[piece[i]]);
+	    else
+	      printf("│%s", piece_string[piece[i]]);
+	    break;
+	  }
 	}
-      } else {
-	switch (color[i]) {
-	case EMPTY:
-	  if ( i % RANKS == 0 )
-	    printf("║   ");
-	  else
-	    printf("│   ");
-	  break;
-	case LIGHT:
-	  if ( i % RANKS == 0 )
-	    printf("║\e[1m%s\e[0m", piece_string[piece[i]]);
-	  else
-	    printf("│\e[1m%s\e[0m", piece_string[piece[i]]);
-	  break;
-	case DARK:
-	  if ( i % RANKS == 0 )
-	    printf("║%s", piece_string[piece[i]]);
-	  else
-	    printf("│%s", piece_string[piece[i]]);
-	  break;
-	}
+	if ((i + 1) % RANKS == 0 && i != LASTSQUARE)
+	  printf( "║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
       }
-      if ((i + 1) % RANKS == 0 && i != LASTSQUARE)
-	printf( "║ %c\n  ╟───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───┼───╢\n%c ", 'a' + GetRank(i), 'b' + GetRank(i)); 
-    }
-    printf( "║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
-  }   
+      printf( "║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
+    }   
+  }
   fflush(stdout);
 }
 

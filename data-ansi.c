@@ -121,9 +121,11 @@ int offsets[PIECE_TYPES] = {
   /* Pawn, King, DE, G, S, C, I, FL, N, L, RC, ChS, BT, Ky, Ph, FK, SM, SSd, VM, VSd, R, Ln */
 	1, 8, 7, 6, 5, 4, 3, 6, 2, 1, 2, 8, 7, 8, 8, 8, 4, 4, 4, 4, 4, 0,
 	/* B, DH, DK, HF, SEg, WB, Dg, BGn, RGn, GGn, FEg, LHk, VGn, FiD */
-	4, 8, 8, 8, 8, 8, 3, 4, 4, 8, 8, 4, 4, 6,
+	4, 8, 8, 8, 8, 8, 3, 4, 4, 8, 8, 4, 4, 8,
 	/* CP, FO, FS, FBo, HT, MGn, +P, W, WH */
-	8, 6, 8, 6, 6, 3, 6, 4, 4,
+	8, 6, 8, 6, 
+	8, 
+	3, 6, 4, 4,
 	/* FK, SM, SSd, VM, VSd, R, Ln, B, DH, DK, HF, SEg, WB, BGn, RGn */
 	8, 4, 4, 4, 4, 4, 0, 4, 8, 8, 8, 8, 8, 4, 4, 8,
 	/* pfree_eagle, plion_hawk, pfire_demon, pvice_general, pgreat_general */
@@ -150,7 +152,7 @@ int promotion[PIECE_TYPES] = {
 */
 
 move_type move_types[PIECE_TYPES][9] = {
-  /* first eight are ofset directions, 9th is lion/igui/ */
+  /* first eight are offset directions, 9th is lion/igui/ */
   { step, none, none, none, none, none, none, none, none },       /* Pawn */
   { step, step, step, step, step, step, step, step, none }, /* King */
   { step, step, step, step, step, step, step, none, none }, /* Drunken Elephant */
@@ -170,7 +172,11 @@ move_type move_types[PIECE_TYPES][9] = {
   { slide, slide, step, step, none, none, none, none, none },  /* SM */
   { slide, slide, two_steps, step, none, none, none, none, none },  /* SSd */
   { slide, slide, step, step, none, none, none, none, none },  /* VM */
+#ifdef VSd_ranges_backwards
   { slide, slide, two_steps, two_steps, none, none, none, none, none },  /* VSd */
+#else
+  { slide, step, two_steps, two_steps, slide, none, none, none, none },  /* VSd */
+#endif
   { slide, slide, slide, slide, none, none, none, none, none },  /* R */
   { none, none, none, none, none, none, none, none, lion}, /* Ln */
   { slide, slide, slide, slide, none, none, none, none, none },  /* B */
@@ -183,7 +189,11 @@ move_type move_types[PIECE_TYPES][9] = {
   { jumpslide, jumpslide, jumpslide, jumpslide, none, none, none, none, none },  /* BGn */
   { jumpslide, jumpslide, jumpslide, jumpslide, none, none, none, none, none },  /* RGn */
   { jumpslide, jumpslide, jumpslide, jumpslide, jumpslide, jumpslide, jumpslide, jumpslide, none },  /* GGn */
+#ifdef edo_style_FEg
+  {  free_eagle,  free_eagle,  free_eagle,  free_eagle,  free_eagle, free_eagle, free_eagle, free_eagle, none },  /* FEg */
+#else
   { slide, free_eagle, slide, free_eagle, free_eagle, slide, free_eagle, slide, none },  /* FEg */
+#endif
   { slide, slide, slide, slide, none, none, none, none, area2 },  /* LHk */
   { jumpslide, jumpslide, jumpslide, jumpslide, none, none, none, none, area3 },  /* VGn */
   { slide, slide, slide, slide, slide, slide, none, none, area3 },  /* FiD */
@@ -191,7 +201,11 @@ move_type move_types[PIECE_TYPES][9] = {
   { slide, slide, slide, slide, slide, slide, none, none, none },  /* FO */
   { step, slide, step, step, step, step, slide, step, none }, /* FS */
   { slide, slide, slide, slide, slide, slide, none, none, none },  /* FBo */
-  { slide, tetrarch, slide, slide, tetrarch, slide, none, none, igui_capture },  /* HT */
+#ifdef japanese_HT
+ { htslide, tetrarch, htslide, htslide, tetrarch, htslide, htslide, htslide, igui_capture },  /* HT */
+#else 
+ { slide, tetrarch, slide, slide, tetrarch, slide, none, none, igui_capture },  /* HT */
+#endif
   { slide, slide, slide, none, none, none, none, none, none },  /* MGn */
   { step, step, step, step, step, step, none, none, none }, /* Tokin */
   { slide, slide, slide, slide, none, none, none,none, none },  /* Whale */
@@ -227,7 +241,7 @@ int lion_jumps[16] = {
 int lion_single_steps[8] = { -21, -20, -19, -1, 19, 20, 21, 1 };
 
 int offset[2][PIECE_TYPES][8] = {
-  /* sente's pieces */
+  /* gote's pieces */
 { { -20,   0,   0,  0,  0,  0,  0, 0 },       /* Pawn */
   { -21, -20, -19, -1,  1, 19, 20, 21 },  /* King */
   { -21, -20, -19, -1,   1, 19, 21, 0 },  /* Drunken Elephant */
@@ -263,12 +277,20 @@ int offset[2][PIECE_TYPES][8] = {
   { -21, -20, -19, -1, 1, 19, 20, 21 },  /* FEg */
   { -21, -19, 21, 19, 0, 0, 0, 0 },  /* LHk */
   { -21, -19, 21, 19, 0, 0, 0, 0 },  /* VGn */
+#ifdef japanese_FiD
+  { -21, -1, -19, 21, 1, 19, 0, 0 },  /* FiD */
+#else
   { -21, -20, -19, 21, 20, 19, 0, 0 },  /* FiD */
+#endif
   { -21, -20, -19, -1,  1, 19, 20, 21 },  /* CP */
   { -21, -20, -19, 21, 20, 19, 0, 0 },  /* FO */
   { -21, -20, -19, -1,  1, 19, 20, 21 },  /* FS */
   { -21, -1, -19, 21, 1, 19, 0, 0 },  /* FBo */
+#ifdef japanese_HT
+  { -21, -1, -19, 21, 1, 19, 20, -20 },  /* HT */
+#else
   { -21, -1, -19, 21, 1, 19, 0, 0 },  /* HT */
+#endif
   { 21, -20, 19, 0, 0, 0, 0, 0 },  /* MGn */
   { 21, -20, 19, -1,   1, 20,  0, 0 },  /* Tokin */
   { -21, -20, -19, 20, 0, 0, 0, 0 },  /* W */
@@ -277,7 +299,7 @@ int offset[2][PIECE_TYPES][8] = {
   { -1, 1, 20, -20, 0, 0, 0, 0 },  /* SM */
   { -1, 1, -20, 20, 0, 0, 0, 0 },  /* SSd */
   { -20, 20, -1, 1, 0, 0, 0, 0 },  /* VM */
-  { -20, 20, -1, 1, 0, 0, 0, 0 },  /* VSd */
+  { 20, -20, -1, 1, 0, 0, 0, 0 },  /* VSd */
   { -1, 1, 20, -20, 0, 0, 0, 0 },  /* Rook */
   { 0, 0, 0, 0, 0, 0, 0, 0 }, /* Lion */
   { -21, -19, 21, 19, 0, 0, 0, 0 },  /* B */
@@ -295,7 +317,7 @@ int offset[2][PIECE_TYPES][8] = {
   { -21, -20, -19, 21, 20, 19, 0, 0 },  /* FiD */
   { -21, -19, 21, 19, 0, 0, 0, 0 },  /* VGn */
   { -21, -20, -19, -1, 1, 19, 20, 21 }  /* GGn */
- }, /* gote's pieces */
+ }, /* sente's pieces */
  { { 20, 0, 0, 0, 0, 0, 0, 0 },       /* Pawn */
    { -21, -20, -19, -1, 1, 19, 20, 21 },  /* King */
    { -21, -19, -1, 1, 19, 20, 21, 0 },  /* Drunken Elephant */
@@ -331,7 +353,11 @@ int offset[2][PIECE_TYPES][8] = {
    { -21, -20, -19, -1, 1, 19, 20, 21 },  /* FEg */
    { -21, -19, 21, 19, 0, 0, 0, 0 },  /* LHk */
    { -21, -19, 21, 19, 0, 0, 0, 0 },  /* VGn */
-   { -21, -20, -19, 21, 20, 19, 0, 0 },  /* FiD */
+#ifdef japanese_FiD
+  { -21, -1, -19, 21, 1, 19, 0, 0 },  /* FiD */
+#else
+  { -21, -20, -19, 21, 20, 19, 0, 0 },  /* FiD */
+#endif
    { -21, -20, -19, -1,  1, 19, 20, 21 },  /* CP */
    { -21, -20, -19, 21, 20, 19, 0, 0 },  /* FO */
    { -21, -20, -19, -1,  1, 19, 20, 21 },  /* FS */

@@ -27,7 +27,8 @@ Installation procedure
 Linux: 
 1. Unpack the tenjiku-X.XX.tgz (it unpacks into a directory)
 2. cd tenjiku-X.XX
-3. make (have a look at the Makefile first)
+3. Have a look at the top of defs.h and choose the options you like
+4. make (have a look at the Makefile first)
 (If you get errors like unknown reference to 'tgets' from libreadline, you'll 
 have to add -lncurses to the linker flags (your readline library doesn't have 
 the curses stuff).

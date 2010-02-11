@@ -49,6 +49,10 @@ BOOL must_promote(int i, int n);
 BOOL higher(int i, int j);
 BOOL suicide(int i);
 int demote(int this);
+void server_init();
+void client_init();
+void send_to_peer(char *string);
+char *get_from_peer();
 
 /* search.c */
 void think(BOOL quiet);

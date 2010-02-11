@@ -25,6 +25,15 @@ char savegamepath[1024] = "savegames";
 char positionpath[1024] = "positions";
 char positionfile[1024];
 
+BOOL tenjiku_server = FALSE;
+BOOL tenjiku_client = FALSE;
+
+int write_port = 8737837; /* tserver on a mobile phone keypad */
+int read_port = 8254367; /* tclient on a mobile phone keypad */
+
+FILE *read_pipe = NULL;
+FILE *write_pipe = NULL;
+
 BOOL rotated = FALSE; /* board is not rotated */
 BOOL annotate = TRUE;
 BOOL search_quiesce = TRUE;
@@ -111,7 +120,28 @@ int main(int argc,  char **argv)
 	printf("version 1.52, 6/29/00\n");
 	printf("\n");
 	printf("\"help\" or \"?\" displays a list of commands.\n");
-	printf("\n");
+	printf("Compiled-in options:\n");
+#ifdef VSd_ranges_backwards
+	printf("VSd slides backwards\n");
+#else
+	printf("VSd single-steps backwards\n");
+#endif
+#ifdef japanese_FiD
+	printf("FiD slides horizontally, not vertically\n");
+#else
+	printf("FiD slides vertically, not horizontally\n");
+#endif
+#ifdef edo_style_Feg
+	printf("FEg jumps to second square orthogonally\n");
+#else
+	printf("FEd has igui and double capture along slide directions\n");
+#endif
+#ifdef japanese_HT
+	printf("HT jumps into all directions, triple-steps orthogonally and slides vertically\n");
+#else
+	printf("HT jumps and triple-steps orthogonally\n");
+#endif
+
 
 	init();
 	book = book_init();
@@ -269,6 +299,23 @@ int main(int argc,  char **argv)
 		  print_board( stdout );
 		  continue;
 		}
+		if (!strcmp(s, "server")) {
+		  server_init();
+		  continue;
+		}
+		if (!strcmp(s, "connect")) {
+		  client_init();
+		  continue;
+		}
+		if (!strcmp(s,"gettest")) {
+		  test_get();
+		  continue;
+		}
+		if (!strcmp(s,"sendtest")) {
+		  test_send();
+		  continue;
+		}
+		
 		if (!strcmp(s, "load")|| !strcmp(s,"l")) {
 		  load_game("");
 		  continue;
@@ -3247,3 +3294,90 @@ void save_position( void ) {
   fclose( outcolor );
 }
 
+
+void server_init( void ) {
+  char command[32];
+
+  if (tenjiku_client) {
+    fprintf(stderr,"I am already acting as a client\n");
+    return;
+  }
+  if (tenjiku_server) {
+    fprintf(stderr,"Server already started\n");
+    return;
+  }
+
+  sprintf(command,"netcat -l -p %u", read_port);
+  /* now open two global pipes for reading and writing through netcat */
+  if ( ! (read_pipe = popen(command, "r")) ) {
+    fprintf(stderr,"cannot establish pipe on port %u\n", read_port);
+    return;
+  }
+
+  sprintf(command,"netcat -l -p %u", write_port);
+  if ( ! (write_pipe = popen(command, "w")) ) {
+    fprintf(stderr,"cannot establish pipe on port %u\n", write_port);
+    return;
+  }
+  fprintf(stderr, "Pipes established, waiting for client\n");
+  tenjiku_server = TRUE;
+  networked_game = TRUE;
+}
+
+void client_init( void ) {
+  char server_name[64];
+  char command[128];
+  if (tenjiku_server) {
+    fprintf(stderr,"I am already acting as a server\n");
+    return;
+  }
+  if (tenjiku_client) {
+    fprintf(stderr,"Client already started\n");
+    return;
+  }
+
+  /* now open two global pipes for reading and writing through netcat */
+  fprintf(stdout, "Enter server name: ");
+  fscanf(stdin,"%s", server_name);
+
+  sprintf(command, "netcat %s %u", server_name, read_port);
+
+  if ( ! (read_pipe = popen(command, "w") )) {
+    fprintf(stderr,"cannot connect to %s on port %u\n", server_name, read_port);
+    return;
+  }
+
+  sprintf(command, "netcat %s %u", server_name, write_port);
+
+  if ( ! (write_pipe = popen( command, "r")) ) {
+    fprintf(stderr,"cannot connect to %s on port %u\n", server_name, write_port);
+    return;
+  }
+  
+  tenjiku_client = TRUE;
+  networked_game = TRUE;
+}
+
+
+void send_to_peer( char *string ) {
+  if ( ! write_pipe )
+    return;
+  fprintf(write_pipe, "%s\n", string);
+  fflush(write_pipe);
+  
+}
+
+char *get_from_peer() {
+  char s[128];
+  if (! read_pipe )
+    return;
+  return (fgets(s, 128,read_pipe));
+}
+
+int test_send( void ) {
+  send_to_peer("7l-7k");
+}
+
+int test_get( void ) {
+  printf("%s\n", get_from_peer());
+}

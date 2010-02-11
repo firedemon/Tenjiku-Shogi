@@ -7,9 +7,15 @@ to fix:
 - burning doesn't show up in influences - should be several grades
   a) direct move b) move after a pieces type a) has moved c) burning (buggy)
 - redo shows wrong piece (loadold qa4, 6c-4e, undo - fixed)
-
+- if WB promotes next to piece which can capture igui, that piece will burn on igui capturing the +WB
 
 to add:
+- shogi zushiki fire demon (moving like WB)
+- japanese (orthogonal ranging) vs. western HT (w.o. orthogonal ranging) -> check igui everywhere and jumps
+  sho shogi zushiki: moves like chariot soldier, igui around and taking two or three steps outside the periphery
+- vertical soldier steps backward
+- edo-style Free Eagle (igui diagonally, jump to all second squares)
+- strict edo (double cat sword)
 
 - put savegames into their own folder with extension (partly done)
 - give last move with fully correct attributes (captures, promotion, burns - it's better now)

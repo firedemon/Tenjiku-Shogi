@@ -1,5 +1,15 @@
 --------------------- CHANGELOG ----------------------
 Latest changes:
+2010.02.11
+added rule variants to defs.h as compile options
+- added japanese FiD (ranging horizontally, not vertically)
+- added wikipedia VSd (only stepping backwards)
+- added japanese style HT (ranging orthogonally, jumping over adjacent piece in every direction)
+- added edo-style FEg (lion power in all directions, but no lion double step)
+
+2010.02.10
+- started hacking on the network code
+
 2010.02.09
 - rotating now works for fullkanji as well
 

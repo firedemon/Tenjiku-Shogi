@@ -9,6 +9,24 @@
 #include <gdbm.h>
 #include <stdio.h>
 
+/*************************************/
+/* compile options for rule variants */
+/*************************************/
+
+#undef VSd_ranges_backwards
+/* #define japanese_FiD 1 */
+
+#undef japanese_FiD
+
+#undef edo_style_FEg 
+/* #define edo_style_FEg 1 */
+
+#define japanese_HT 1
+
+/************************************/
+/*  end of user-configurable stuff  */
+/************************************/
+
 #define BOOL			int
 #define TRUE			1
 #define FALSE			0
@@ -128,7 +146,8 @@ typedef enum {
   area2, /* VGn */
   area3, /* FiD */
   free_eagle, /* FEg */
-  jumpslide
+  jumpslide,
+  htslide /* jump over the adjacent square and then slide */
 } move_type;
 
 typedef enum {
@@ -274,6 +293,15 @@ extern BOOL move_now;
 
 extern BOOL have_book;
 extern GDBM_FILE book;
+
+extern BOOL tenjiku_server;
+extern BOOL tenjiku_client;
+
+extern int read_port;
+extern int write_port;
+
+extern FILE *read_pipe;
+extern FILE *write_pipe;
 
 #ifdef EVAL_INFLUENCE
 

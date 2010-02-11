@@ -790,7 +790,43 @@ int get_steps( int i, int j, int s ) {
       }
     }
     return(0);
-  case free_eagle: /* add jump and go on with slide */
+  case free_eagle:
+#ifdef edo_style_FEg
+    /* add lion moves for SEg and HF */
+    /* single step and igui first */
+    n = mailbox[mailbox256[i] + offset[s][piece[i]][j]];
+    if ( n == -1 ) return 0; /* first part-move off board already */
+
+    if (color[n] != EMPTY) { /* only here the double step is different
+				from the jump */
+      if (color[n] != s) {
+	gen_push(i, n, 1);           /* capture w.o. promotion */
+	gen_push_igui(i, n, 33);     /* igui capture w.o. promotion */
+	n2 = mailbox[mailbox256[i] + 2*offset[s][piece[i]][j]]; /* next step */
+	if ( n2 == -1 ) break;        /* jump also not possible */
+	if (color[n2] == s ) break;   /* don't step on own pieces */
+	/* we have a double step and a capture on the first move.
+	   maybe there's a capture on the second move as well. */
+	gen_push_lion_move(i,n,n2,5);
+      }
+    } else {
+      gen_push(i, n, 0);
+      gen_push_igui(i, n, 0);	
+    }
+    /* jump */
+    n = mailbox[mailbox256[i] + 2*offset[s][piece[i]][j]];
+    if ( n == -1 );
+    else {
+      if (color[n] != EMPTY) {
+	if (color[n] != s) {
+	  gen_push(i, n, 1);      /* capture without promotion */
+	}
+      } else { /* no capture on jump */
+	gen_push(i, n, 0);       /* normal, boring move */
+      }
+    }
+#else
+    /* add jump and go on with slide */
       n = mailbox[mailbox256[i] + 2 * offset[s][piece[i]][j]];
       if ( n == -1 ) return(1); /* no sense in checking further */
       else if (color[n] != EMPTY ) {
@@ -802,6 +838,7 @@ int get_steps( int i, int j, int s ) {
 	if ( can_promote(i,n) ) gen_push(i, n, 16);
 	gen_push(i, n, 0);
       } /* no break here!!! */
+#endif
   case slide:
 	/* check for very tame FiD here */
 	if ( verytame_FiD && 
@@ -820,6 +857,25 @@ int get_steps( int i, int j, int s ) {
 	} else {
 	  return(16);
 	}
+	break;
+  case htslide:
+	  for ( n = i ;;) { 
+	    n = mailbox[mailbox256[n] + offset[s][piece[i]][j]];
+	    if (n == -1) /* off-board */
+	      break;
+	    if ( color[n] == EMPTY ) {
+	      if ((( n > i )&&( n> i+17))||
+		  ((n<i)&&(i> n+17))) 
+		gen_push(i,n,1); /* HT does not promote */
+	    } else {
+	      if ( color[n] == xside ) {
+		gen_push(i,n,1);
+	      }
+	      break; /* any non-empty square stops the HT */
+	    }
+	  }
+	  return(0);
+    
   case two_steps:
     return(2);
   case step:

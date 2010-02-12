@@ -13,7 +13,6 @@
 /* compile options for rule variants */
 /*************************************/
 
-#undef VSd_ranges_backwards
 /* #define japanese_FiD 1 */
 
 #undef japanese_FiD

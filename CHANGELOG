@@ -1,6 +1,9 @@
 --------------------- CHANGELOG ----------------------
 Latest changes:
 2010.02.11
+- removed ranging VSd completely (it was only me having read the rules incorrectly)
+- fixed typo in the western HT
+2010.02.11
 added rule variants to defs.h as compile options
 - added japanese FiD (ranging horizontally, not vertically)
 - added wikipedia VSd (only stepping backwards)

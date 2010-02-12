@@ -121,11 +121,6 @@ int main(int argc,  char **argv)
 	printf("\n");
 	printf("\"help\" or \"?\" displays a list of commands.\n");
 	printf("Compiled-in options:\n");
-#ifdef VSd_ranges_backwards
-	printf("VSd slides backwards\n");
-#else
-	printf("VSd single-steps backwards\n");
-#endif
 #ifdef japanese_FiD
 	printf("FiD slides horizontally, not vertically\n");
 #else

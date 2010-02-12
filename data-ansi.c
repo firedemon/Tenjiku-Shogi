@@ -172,11 +172,7 @@ move_type move_types[PIECE_TYPES][9] = {
   { slide, slide, step, step, none, none, none, none, none },  /* SM */
   { slide, slide, two_steps, step, none, none, none, none, none },  /* SSd */
   { slide, slide, step, step, none, none, none, none, none },  /* VM */
-#ifdef VSd_ranges_backwards
-  { slide, slide, two_steps, two_steps, none, none, none, none, none },  /* VSd */
-#else
   { slide, step, two_steps, two_steps, slide, none, none, none, none },  /* VSd */
-#endif
   { slide, slide, slide, slide, none, none, none, none, none },  /* R */
   { none, none, none, none, none, none, none, none, lion}, /* Ln */
   { slide, slide, slide, slide, none, none, none, none, none },  /* B */
@@ -204,7 +200,7 @@ move_type move_types[PIECE_TYPES][9] = {
 #ifdef japanese_HT
  { htslide, tetrarch, htslide, htslide, tetrarch, htslide, htslide, htslide, igui_capture },  /* HT */
 #else 
- { slide, tetrarch, slide, slide, tetrarch, slide, none, none, igui_capture },  /* HT */
+ { htslide, tetrarch, htslide, htslide, tetrarch, htslide, none, none, igui_capture },  /* HT */
 #endif
   { slide, slide, slide, none, none, none, none, none, none },  /* MGn */
   { step, step, step, step, step, step, none, none, none }, /* Tokin */

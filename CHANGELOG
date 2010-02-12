@@ -1,8 +1,15 @@
 --------------------- CHANGELOG ----------------------
 Latest changes:
-2010.02.11
+2010.02.12
 - removed ranging VSd completely (it was only me having read the rules incorrectly)
 - fixed typo in the western HT
+- fixed display of next move and last move for fullkanji mode
+- fixed nasty bug (I hope) which caused sometimes switching piece color after undo and redo
+- added file listings in case an invalid file for loading a game or a position is specified
+- fixed burning in influences
+- bug fixed: if WB promotes next to piece which can capture igui, that piece will burn on igui capturing the +WB
+- updated TODO 
+
 2010.02.11
 added rule variants to defs.h as compile options
 - added japanese FiD (ranging horizontally, not vertically)

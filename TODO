@@ -1,32 +1,16 @@
 ---------------------- TODO -------------------------
 
 to fix:
+- add promoted WBs to the list of FiDs
 - spurious "Illegal move" on eof
-- identifymove doesn't always find the correct move (sometimes leads to pieces changing their color) seems like move still gets onto redo stack, but not on undo
 - clear up show_moves (done) and show_influence
-- burning doesn't show up in influences - should be several grades
+- burning doesn't show up in influences (hopefully done)
   a) direct move b) move after a pieces type a) has moved c) burning (buggy)
-- redo shows wrong piece (loadold qa4, 6c-4e, undo - fixed)
-- if WB promotes next to piece which can capture igui, that piece will burn on igui capturing the +WB
+
 
 to add:
-- shogi zushiki fire demon (moving like WB)
-- japanese (orthogonal ranging) vs. western HT (w.o. orthogonal ranging) -> check igui everywhere and jumps
-  sho shogi zushiki: moves like chariot soldier, igui around and taking two or three steps outside the periphery
-- vertical soldier steps backward
-- edo-style Free Eagle (igui diagonally, jump to all second squares)
-- strict edo (double cat sword)
-
-- put savegames into their own folder with extension (partly done)
-- give last move with fully correct attributes (captures, promotion, burns - it's better now)
+- put savegames into their own folder with extension (partly done, no extension yet)
 - add better documentation (good one!)
-- setup positions (done)
-- show checks (done)
-- trim strings for kifu (done)
-- keep track of material (done)
-- add burning pieces to move_str (done)
-- burn information should go into move_bits (done)
-- make board turnable (mostly done)
 
 - make colors etc. configurable
 - rewrite input parser
@@ -34,67 +18,21 @@ to add:
 - mating solver
 - rewrite input parser
 - hide colors from savegames
-- trim strings for kifu
 - put redos into kifu
-- add readline completion for load
 
 consider:
 -graphical GUI
--filename completion in load and loadold
--showing and saving trees
+-showing and saving trees for a book
 -add comments
 -show igui among possible moves
-- burn_all_FiD not implemented
 
-earlier done:
-
--make shortcut commands and moves like ZoG (partly ok, giving only one square works, sometimes BUGGY)
-
-
-minor bugs: influence can't see whether a piece is defended by a jgn and attacked by a jgn
+minor bugs:
 influence need information about attacker and defender values
 at least least valuable defender
 
 add random select when equally rated moves
 
 -----------------------------------------------------------
-
-2. Other Ln moves (done)
-   Reduce several igui w.o. captures to one (done)
-   Ln next to enemy pieces segfaults (fixed)
-	
-
-3. Jumping Generals (done)
-
-fix load_game() (done)
-area moves!!!, double cat-sword (FEg)
-write check one area to prevent 3 nested for-loops
-(LHk) (done)
-
- VGn (done )
-
-4. if Fire Demon moves next to FiD, both disappear (done)
-      takeback doesn't restore burnt pieces, but changes
-	FiD to opponent's FiD (fixed)
-
-other pieces, promotion (done)
-
-5. Heavenly Tetrarchs (done)
-
-get_steps need get_steps_caps() generating only captures (done)
-
-add piece values  (done)
-
-load_file must understand commands (done)
-
-bug somewhere: changing color of piece (new takeback debug, done?)
-
-bug in Ln move: can leave colored empty square (done?)
-
-attack and in_check need additional code for FiD and CP (done?)
-
-find bug in move generating/retracting (not an overflow!!!)
-maybe initialize *everything* we're writing to (done)
 
 add opening book (done)
 
@@ -106,61 +44,6 @@ force move possibility (done)
 latex tenjikupieces
 dvips tenjikupieces
  gs  -dNOPAUSE -sDEVICE=pnm -sOutputFile="|pnmcrop|pnmtotiff > /usr/tmp/tenj%d.tiff" tenjikupieces.ps quit.ps
-
-GRAPHICAL INTERFACE
-
-draw the board (done)
-
-draw_move gets 8k-11k instead of 9l-9k and 9m-9k instead
-of 8l-8k (done)
-draw_move: drag or click here and there (done)
-	make move and animate (done)
-
-undraw_move (done)
-graphics (done) for pieces
-save and load dialog (done)
-
-help for pieces and coordinates (done)
-force button (done)
----------
-
-label Computer is thinking/Your move (done)
-display pv (done)
-displaying influences during computer thinking kills search (fixed)
-move script (done)
-book doesn't work for moves from a file (fixed)
-implement Ln move, igui doesn't work (fixed)
-fix Graphics VSd -> ChS(black) (fixed)
-
-very urgent
-----------
-fix main-nox11.c (new in_book function)
-
-fix clicking chaos (display time, search depth, which move, cancel move)
-fix square sizes for moves/influences
-
-fix panel layout (grid manager in examples/entry.c)
-
-fix Makefile (TeX, X, install target)
-
-better computer player
-
-medium urgent
--------------
-
-rule variants 
-board coordinates (doesn't work :-(
-smart moves for ascii version
-
-less urgent
-----------------------
-
-sound when capturing/making a move
-flip view
-autoplay button
-help dialogs
-handicaps
-setup
 
 
 -------------------------------------------------------------
@@ -183,14 +66,3 @@ add square weights for eval()
 better opening book (for other variants as well)
 with default moves (if not this move reply that)
 
-add init file ~/.tenjiku to read setup
-
-
-
----------------
-
-variants
-FiD (TSA), FiD (GH)
-LHk (TSA), LHk (CPA)
-FEg (TSA), FEg (EW)
-JGs (TSA), JGns (EW)

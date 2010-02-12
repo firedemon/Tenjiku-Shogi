@@ -9,7 +9,9 @@
 
 unsigned char tenjiku_version[] = { "0.60" };
 /* #define DEBUG
- */
+ */ 
+#include <sys/types.h>
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -533,7 +535,7 @@ int main(int argc,  char **argv)
 		  }
 		  computer_side = EMPTY;
 		  redo_move();
-		  gen();
+		  /* gen(); */
 		  print_board(stdout);
 		  continue;
 		}
@@ -1699,23 +1701,12 @@ void full_kanji_print_board( FILE *fd )
   }
 
   if ( redos ) {
-    if ( redo_dat[redos-1].m.b.over != EMPTY ) {
-      fprintf( fd,"\t(next move %d: %s%s from %d%c over %d%c to %d%c)", 
-	       undos+1,
-	       upper_kanji_string[undo_dat[undos-1].oldpiece],
-	       lower_kanji_string[undo_dat[undos-1].oldpiece],
-	       16 - GetFile(redo_dat[redos-1].m.b.from), redo_dat[redos-1].m.b.from/16 + 'a', 
-	       16 - GetFile(redo_dat[redos-1].m.b.over),  redo_dat[redos-1].m.b.over/16 + 'a', 
-	       16 - GetFile(redo_dat[redos-1].m.b.to), redo_dat[redos-1].m.b.to/16 + 'a');
-    } else {      
-      fprintf( fd,"\t(next move %d: %s%s from %d%c to %d%c)", 
-	       undos+1,
-	       upper_kanji_string[undo_dat[undos-1].oldpiece],
-	       lower_kanji_string[undo_dat[undos-1].oldpiece],
-	       16 - GetFile(redo_dat[redos-1].m.b.from), GetRank(redo_dat[redos-1].m.b.from) + 'a', 
-	       16 - GetFile(redo_dat[redos-1].m.b.to),  GetRank(redo_dat[redos-1].m.b.to) + 'a');
-    }
+    fprintf( fd, "(next move: %d. %s)\n",
+	     undos+1, move_str(redo_dat[redos-1].m.b));
+  } else {
+    fprintf( fd, "(no next move)\n");
   }
+
   fprintf( fd,"\n");
   fflush(fd);
 }
@@ -1743,9 +1734,22 @@ void really_load_game( char *fn ) {
   char from_rank, over_rank, to_rank, igui, igui2, prom;
   BOOL promote, found;
   FILE *fh;
+  DIR *dp;
+  struct dirent *ep;
+
   fh = fopen(fn,"rb");
   if (! fh) {
-    printf("%s: No such file!\n", fn );
+    printf("%s: No such file! Possible load files are:\n", fn );    
+    
+    dp = opendir ("./savegames/");
+    if (dp != NULL) {
+      while (ep = readdir (dp))
+	printf ("%s ", ep->d_name);
+      (void) closedir (dp);
+      printf("\n");
+    }
+    else
+      perror ("Couldn't open the directory");
     fflush(stdout);
     return;
   }
@@ -2145,6 +2149,10 @@ int identifymove( int file, char rank, char promotion_or_capture ) {
 
   for (i = 0; i < gen_end[ply]; ++i) {
     if ( gen_dat[i].m.b.from == from_or_to ) { /* friendly piece found, should have only one move */
+      if ( color[ gen_dat[i].m.b.from] != side )
+	continue;
+      if ( color[ gen_dat[i].m.b.to] == side )
+	continue;
       /* check if capture or prom is ok */
       if ( promotion && ! ( gen_dat[i].m.b.bits & 16 )) 
 	continue;
@@ -2155,12 +2163,21 @@ int identifymove( int file, char rank, char promotion_or_capture ) {
       return(i);
     } else if ( gen_dat[i].m.b.to == from_or_to ) { /* opponent piece or empty square found */
       /* check if capture or prom is ok */
+      if ( color[ gen_dat[i].m.b.from] != side )
+	continue;
+      if ( color[ gen_dat[i].m.b.to] == side )
+	continue;
       if ( promotion && ! ( gen_dat[i].m.b.bits & 16 )) 
 	continue;
       else if  ( !promotion && ( gen_dat[i].m.b.bits & 16 )) 
 	continue;
-      else
+      else if ( !capture && piece[gen_dat[i].m.b.to] != EMPTY )
+	continue;
+      else if ( capture && piece[gen_dat[i].m.b.to] == EMPTY )
+	continue;
+      else {
 	return(i);
+      }
     }
   }
   return( -1 );
@@ -2221,7 +2238,9 @@ void show_moves( void ) {
   from = RANKS - file;
   from += FILES * (rank - 'a');
 
-  if (( piece[from] == FIRE_DEMON ) || ! hodges_FiD )
+  if ((( piece[from] == FIRE_DEMON ) || 
+       ( piece[from] == PFIRE_DEMON )) && 
+      ! hodges_FiD )
     i_am_a_fire_demon = TRUE; /* only Hodges-style FiD will be 
 				 burned by another FiD */
 
@@ -2311,7 +2330,8 @@ void show_moves( void ) {
 	/* check whether Fire Demon can burn */
 	if ( !i_am_a_fire_demon ) { /* otherwise  I won't get hurt, 
 				       hodges_FiD already checked */
-	  if ( piece[gen_dat[j].m.b.from] == FIRE_DEMON ) {
+	  if (( piece[gen_dat[j].m.b.from] == FIRE_DEMON ) ||
+	      ( piece[gen_dat[j].m.b.from] == PFIRE_DEMON )) {
 	    for (k = 0; k < 8; k++) {
 	      n = mailbox[mailbox256[(int)gen_dat[j].m.b.to] + lion_single_steps[k]];
 #ifdef DDEBUG
@@ -2726,8 +2746,10 @@ void show_influence( void ) {
       if ( gen_dat[i].m.b.to == to ) {
 	printf("%s, ", move_str(gen_dat[i].m.b));
 	var_board[gen_dat[i].m.b.from] = level;
-      } else {	/* can a fire demon burn something on the square */
-	if ( piece[ gen_dat[i].m.b.from ] == FIRE_DEMON ) {
+      } else {	/* can a fire demon burn something on the square? */
+	if (( piece[ gen_dat[i].m.b.from ] == FIRE_DEMON )||
+	    ( piece[ gen_dat[i].m.b.from ] == PFIRE_DEMON ))
+	  {
 	  /* only fire demons burn */
 	  /* is the square next to "to"? */
 	  for (k = 0; k < 8; k++) {
@@ -2769,7 +2791,8 @@ void show_influence( void ) {
 	printf("%s, ", move_str(gen_dat[i].m.b));
 	var_board[gen_dat[i].m.b.from] = level;
       } else {	/* can a fire demon burn something on the square */
-	if ( piece[ gen_dat[i].m.b.from ] == FIRE_DEMON ) {
+	if (( piece[ gen_dat[i].m.b.from ] == FIRE_DEMON )||
+	    ( piece[ gen_dat[i].m.b.from ] == PFIRE_DEMON )) {
 	  /* only fire demons burn */
 	  /* is the square next to "to"? */
 	  for (k = 0; k < 8; k++) {
@@ -3147,7 +3170,8 @@ void undo_move( void ) {
     return;
   --undos;
   hist_dat[0] = undo_dat[undos];
-  redo_dat[redos++] = hist_dat[0];
+  redo_dat[redos] = hist_dat[0];
+  redos++;
   ply = 1;
   takeback();
   gen();
@@ -3159,8 +3183,10 @@ void redo_move( void ) {
   /* has to be put back onto undo_dat as well
      as taken down from redo_dat */
   hist_dat[0] = redo_dat[redos];
-  undo_dat[undos++] = hist_dat[0];
-  ply = 1;
+  undo_dat[undos] = hist_dat[0];
+  undos++;
+  ply = 0;
+  /* gen(); */
   makemove(hist_dat[0].m.b);
 }
 
@@ -3233,6 +3259,8 @@ void load_position( char *defaultinputname ) {
   FILE *frompiece, *fromcolor;
   char inputname[1024];
   char piecefile[1024], colorfile[1024];
+  DIR *dp;
+  struct dirent *ep;
 
   if ( ! defaultinputname ) {
     fprintf(stdout, "Enter name for position file (w.o. extension): ");
@@ -3243,12 +3271,33 @@ void load_position( char *defaultinputname ) {
 
   sprintf(piecefile, "%s/%s.pieces",positionpath,inputname); 
   sprintf(colorfile, "%s/%s.colors",positionpath,inputname); 
+
   if ( !(frompiece=fopen(piecefile,"rb"))) {
-    fprintf(stderr, "Cannot open %s\n", piecefile);
-    return;
+    printf("%s: No such file! Possible load files are:\n", piecefile );    
+    dp = opendir ("./positions/");
+    if (dp != NULL) {
+      while (ep = readdir (dp))
+	printf ("%s ", ep->d_name);
+      (void) closedir (dp);
+      printf("\n");
+    }
+    else
+      perror ("Couldn't open the directory");
+    fflush(stdout); 
+  return;
   }
   if ( !(fromcolor=fopen(colorfile,"rb"))) {
-    fprintf(stderr, "Cannot open %s\n", colorfile);
+    printf("%s: No such file! Possible load files are:\n", colorfile );    
+    dp = opendir ("./positions/");
+    if (dp != NULL) {
+      while (ep = readdir (dp))
+	printf ("%s ", ep->d_name);
+      (void) closedir (dp);
+      printf("\n");
+    }
+    else
+      perror ("Couldn't open the directory");
+    fflush(stdout);
     return;
   }
   for (i = 0; i < NUMSQUARES; i++) {

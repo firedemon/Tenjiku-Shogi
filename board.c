@@ -111,7 +111,8 @@ BOOL burning(int where, int sq ) {
   */
 
   int i,n;
-  if ( piece[where] != FIRE_DEMON ) return FALSE;
+  if (( piece[where] != FIRE_DEMON ) ||( piece[where] != PFIRE_DEMON ))
+    return FALSE;
   if ( !hodges_FiD && suicide(sq)) return FALSE;
   if (verytame_FiD && ( color[where] != EMPTY )) return FALSE;
   if (tame_FiD && ( color[where] != EMPTY )) return FALSE;
@@ -131,7 +132,8 @@ int eval_burned(int where, int sq ) {
   */
   int cum = 0;
   int i,n;
-  if ( piece[where] != FIRE_DEMON ) return 0;
+  if (( piece[where] != FIRE_DEMON ) ||( piece[where] != PFIRE_DEMON ) )
+    return 0;
   if ( jgs_tsa && suicide(sq)) return piece_value[piece[sq]];
   for (i = 0; i < 8; i++) {
     n = mailbox[mailbox256[sq] + lion_single_steps[i]];
@@ -149,7 +151,8 @@ void burn_infl(int where, int sq ) {
   */
 
   int i,n;
-  if ( piece[where] != FIRE_DEMON ) return;
+  if (( piece[where] != FIRE_DEMON )||( piece[where] != PFIRE_DEMON ))
+    return;
   if ( jgs_tsa && suicide(sq)) return;
   for (i = 0; i < 8; i++) {
     n = mailbox[mailbox256[sq] + lion_single_steps[i]];
@@ -195,7 +198,7 @@ void check_area(int i, int j, int s, int *area, int array_size, int depth) {
       else {    /* capture */
 	/* check for very tame FiD here */
 	if ( verytame_FiD && 
-	     piece[i] == FIRE_DEMON ) ;
+	     ( (piece[i] == FIRE_DEMON) ||( piece[i] == PFIRE_DEMON ))) ;
 	else if ( check_square(n2, area, array_size) ) { /* new square */
 	  if ( burning(i,n2) )
 	    gen_push(i,n2,65);
@@ -252,7 +255,8 @@ BOOL check_area_caps(int i, int j, int s, int *area,
       else {    /* capture */
 	/* check for very tame FiD here */
 	if ( verytame_FiD && 
-	     piece[i] == FIRE_DEMON ) ;
+	     ((piece[i] == FIRE_DEMON)||( piece[i] == PFIRE_DEMON )))
+	  ;
 	else {
 	  if ( check_square(n2, area, array_size) ) { /* new square */
 #ifdef VALUABLE_CAPTURES
@@ -842,7 +846,7 @@ int get_steps( int i, int j, int s ) {
   case slide:
 	/* check for very tame FiD here */
 	if ( verytame_FiD && 
-	     piece[i] == FIRE_DEMON) {
+	     ((piece[i] == FIRE_DEMON)||( piece[i] == PFIRE_DEMON ))){
 	  for ( n = i;;) { 
 	    n = mailbox[mailbox256[n] + offset[s][piece[i]][j]];
 	    if (n == -1)
@@ -1475,7 +1479,7 @@ void gen_push(int from, int to, int bits)
 		g->score = 100000 + (piece[to] * 10) - piece[from];
 	else
 		g->score = history[from][to];
-	if ( suicide(to) ) { /* landing next to enemy FiD */
+	if ( suicide(to) ) { /* landing next to enemy FiD, suicide unless lion capture of the FiD */
 	  g->m.b.bits |=  2;
 	  g->score -= ( 1000000 + piece[from] * 10);
 	}
@@ -1504,6 +1508,10 @@ void gen_push_igui(int from, int over, int bits)
 		g->score = history[from][over];
 
 	if ( suicide(from) ) { /* landing next to enemy FiD (just promoted WBf) */
+	  /* have we just igui-captured the FiD found by suicide? */
+	  if (( piece[over] == FIRE_DEMON )||
+	       ( piece[over] == PFIRE_DEMON )) 
+	    return;
 	  g->m.b.bits |= 2;
 	  g->score -= ( 100000 + piece[from] * 10);
 	}
@@ -1542,6 +1550,9 @@ void gen_push_lion_move(int from, int over, int to, int bits)
 	  g->score = history[from][over];
 	}
 	if ( suicide(to) ) { /* landing next to enemy FiD */
+	  if (( piece[over] == FIRE_DEMON )||
+	       ( piece[over] == PFIRE_DEMON )) 
+	    return;
 	  g->m.b.bits |= 2;
 	  g->score -= ( 100000 + piece[from] * 10);
 	}
@@ -1559,10 +1570,10 @@ BOOL suicide( int sq ) {
   /* Returns true iff sq is next to enemy FiD */
   /* There should be a counter of FiDs on board to speed this up. */
   int i, n;
-  if ( ! fire_demons[xside] ) return FALSE;
+  /* if ( ! fire_demons[xside] ) return FALSE; *//* does this work for +WB ?*/
   for (i = 0; i < 8; i++ ) {
     n = mailbox[mailbox256[sq] + lion_single_steps[i]];
-    if (( n != -1) && (color[n] == xside) && (piece[n] == FIRE_DEMON))
+    if (( n != -1) && (color[n] == xside) && ((piece[n] == FIRE_DEMON)||(piece[n] == PFIRE_DEMON)))
       return TRUE;
   }
   return FALSE;
@@ -1600,7 +1611,8 @@ BOOL makemove(move_bytes m)
       hist_dat[ply].burn[i] = EMPTY;
     }
   }
-  if ( piece[(int)m.to] == FIRE_DEMON ) /* we've captured an FiD */
+  if (( piece[(int)m.to] == FIRE_DEMON )||( piece[(int)m.to] == PFIRE_DEMON ))
+    /* we've captured an FiD */
     fire_demons[xside]--;
 
   if ( m.bits & 4 ) {
@@ -1802,7 +1814,7 @@ BOOL make_FiD( move_bytes m ) {
 
   if ( m.bits & 2 ) { /* only the FiD burns */
     fire_demons[side]--;
-    captured[side][FIRE_DEMON]++;
+    captured[side][piece[(int)m.to]]++;
     piece[(int)m.to] = EMPTY;
     color[(int)m.to] = EMPTY;
   }
@@ -2055,7 +2067,8 @@ void take_back_normal(move_bytes m) { /* can be capture or not */
     color[(int)m.to] = xside;
     piece[(int)m.to] = hist_dat[ply].capture;
     captured[xside][demote(piece[(int)m.to])]--;
-    if ( hist_dat[ply].capture == FIRE_DEMON ) {
+    if (( hist_dat[ply].capture == FIRE_DEMON )||
+	(hist_dat[ply].capture == PFIRE_DEMON )) {
       fire_demons[xside]++;
     }
   } else {
@@ -2163,7 +2176,8 @@ BOOL attack(int sq, int s)
       return( TRUE );
       /* or if it's a fire demon not commiting suicide and the opponent's
 	 K or CP next to it */
-    } else if (( piece[gen_dat[n].m.b.from] == FIRE_DEMON) &&
+    } else if (( piece[gen_dat[n].m.b.from] == FIRE_DEMON)||
+	       ( piece[gen_dat[n].m.b.from] == PFIRE_DEMON) &&
 		 (!suicide(gen_dat[n].m.b.to)||hodges_FiD)) {
 	/* check if there's an opponent's K or CP */
       /*

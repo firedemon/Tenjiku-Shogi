@@ -1136,14 +1136,14 @@ void ascii_print_board( FILE *fd )
       case LIGHT:
 	if (( i == from_square )||( i == to_square )) {
 	  if ( i %RANKS == 15 )
-	    fprintf( fd,"║\e[43m\e[1m%s\e[0m", piece_string[piece[i]]);
+	    fprintf( fd,"║\e[43m\e[4m%s\e[0m", piece_string[piece[i]]);
 	  else
-	    fprintf( fd,"│\e[43m\e[1m%s\e[0m", piece_string[piece[i]]);
+	    fprintf( fd,"│\e[43m\e[4m%s\e[0m", piece_string[piece[i]]);
 	} else {
 	  if ( i %RANKS == 15 )
-	    fprintf( fd,"║\e[1m%s\e[0m", piece_string[piece[i]]);
+	    fprintf( fd,"║\e[4m%s\e[0m", piece_string[piece[i]]);
 	  else
-	    fprintf( fd,"│\e[1m%s\e[0m", piece_string[piece[i]]);
+	    fprintf( fd,"│\e[4m%s\e[0m", piece_string[piece[i]]);
 	}
 	break;
       case DARK:
@@ -1199,14 +1199,14 @@ void ascii_print_board( FILE *fd )
       case LIGHT:
 	if (( i == from_square )||( i == to_square )) {
 	  if ( i %RANKS == 0 )
-	    fprintf( fd,"║\e[43m\e[1m%s\e[0m", piece_string[piece[i]]);
+	    fprintf( fd,"║\e[43m\e[4m%s\e[0m", piece_string[piece[i]]);
 	  else
-	    fprintf( fd,"│\e[43m\e[1m%s\e[0m", piece_string[piece[i]]);
+	    fprintf( fd,"│\e[43m\e[4m%s\e[0m", piece_string[piece[i]]);
 	} else {
 	  if ( i %RANKS == 0 )
-	    fprintf( fd,"║\e[1m%s\e[0m", piece_string[piece[i]]);
+	    fprintf( fd,"║\e[4m%s\e[0m", piece_string[piece[i]]);
 	  else
-	    fprintf( fd,"│\e[1m%s\e[0m", piece_string[piece[i]]);
+	    fprintf( fd,"│\e[4m%s\e[0m", piece_string[piece[i]]);
 	}
 	break;
       case DARK:
@@ -1307,14 +1307,14 @@ void kanji_print_board( FILE *fd )
       case LIGHT:
 	if (( i == from_square )||( i == to_square )) {
 	  if ( i %RANKS == 15 )
-	    fprintf( fd,"║\e[43m\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	    fprintf( fd,"║\e[43m\e[4m%s\e[0m", kanji_piece_string[piece[i]]);
 	  else
-	    fprintf( fd,"│\e[43m\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	    fprintf( fd,"│\e[43m\e[4m%s\e[0m", kanji_piece_string[piece[i]]);
 	} else {
 	  if ( i %RANKS == 15 )
-	    fprintf( fd,"║\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	    fprintf( fd,"║\e[4m%s\e[0m", kanji_piece_string[piece[i]]);
 	  else
-	    fprintf( fd,"│\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	    fprintf( fd,"│\e[4m%s\e[0m", kanji_piece_string[piece[i]]);
 	}
 	break;
       case DARK:
@@ -1370,14 +1370,14 @@ void kanji_print_board( FILE *fd )
       case LIGHT:
 	if (( i == from_square )||( i == to_square )) {
 	  if ( i %RANKS == 0 )
-	    fprintf( fd,"║\e[43m\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	    fprintf( fd,"║\e[43m\e[4m%s\e[0m", kanji_piece_string[piece[i]]);
 	  else
-	    fprintf( fd,"│\e[43m\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	    fprintf( fd,"│\e[43m\e[4m%s\e[0m", kanji_piece_string[piece[i]]);
 	} else {
 	  if ( i %RANKS == 0 )
-	    fprintf( fd,"║\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	    fprintf( fd,"║\e[4m%s\e[0m", kanji_piece_string[piece[i]]);
 	  else
-	    fprintf( fd,"│\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	    fprintf( fd,"│\e[4m%s\e[0m", kanji_piece_string[piece[i]]);
 	}
 	break;
       case DARK:
@@ -1478,25 +1478,25 @@ void full_kanji_print_board( FILE *fd )
 	if (( i == from_square )||( i == to_square )) {
 	  if ( i %RANKS == 15 )
 	    if ( !same_rank )
-	      fprintf( fd,"║\e[43m↓\e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+	      fprintf( fd,"║\e[43m↓%s\e[0m", upper_kanji_string[piece[i]]);
 	    else
-	      fprintf( fd,"║\e[43m↓\e[1m%s\e[0m", lower_kanji_string[piece[i]]);
+	      fprintf( fd,"║\e[43m↓%s\e[0m", lower_kanji_string[piece[i]]);
 	  else
 	    if ( !same_rank ) 
-	      fprintf( fd,"│\e[43m↓\e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+	      fprintf( fd,"│\e[43m↓%s\e[0m", upper_kanji_string[piece[i]]);
 	  else
-	    fprintf( fd,"│\e[43m↓\e[1m%s\e[0m", lower_kanji_string[piece[i]]);
+	    fprintf( fd,"│\e[43m↓%s\e[0m", lower_kanji_string[piece[i]]);
 	} else {
 	  if ( i %RANKS == 15 )
 	    if ( !same_rank )
-	      fprintf( fd,"║\e[1m↓%s\e[0m", upper_kanji_string[piece[i]]);
+	      fprintf( fd,"║↓%s\e[0m", upper_kanji_string[piece[i]]);
 	    else
-	      fprintf( fd,"║\e[1m↓%s\e[0m", lower_kanji_string[piece[i]]);
+	      fprintf( fd,"║↓%s\e[0m", lower_kanji_string[piece[i]]);
 	  else
 	    if ( !same_rank )
-	      fprintf( fd,"│\e[1m↓%s\e[0m", upper_kanji_string[piece[i]]);
+	      fprintf( fd,"│↓%s\e[0m", upper_kanji_string[piece[i]]);
 	    else
-	      fprintf( fd,"│\e[1m↓%s\e[0m", lower_kanji_string[piece[i]]);
+	      fprintf( fd,"│↓%s\e[0m", lower_kanji_string[piece[i]]);
 	}
 	break;
       case DARK:
@@ -1596,25 +1596,25 @@ void full_kanji_print_board( FILE *fd )
 	if (( i == from_square )||( i == to_square )) {
 	  if ( i %RANKS == 0 )
 	    if ( !same_rank )
-	      fprintf( fd,"║\e[43m↑\e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+	      fprintf( fd,"║\e[43m↑%s\e[0m", upper_kanji_string[piece[i]]);
 	    else
-	      fprintf( fd,"║\e[43m↑\e[1m%s\e[0m", lower_kanji_string[piece[i]]);
+	      fprintf( fd,"║\e[43m↑%s\e[0m", lower_kanji_string[piece[i]]);
 	  else
 	    if ( !same_rank ) 
-	      fprintf( fd,"│\e[43m↑\e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+	      fprintf( fd,"│\e[43m↑%s\e[0m", upper_kanji_string[piece[i]]);
 	  else
-	    fprintf( fd,"│\e[43m↑\e[1m%s\e[0m", lower_kanji_string[piece[i]]);
+	    fprintf( fd,"│\e[43m↑%s\e[0m", lower_kanji_string[piece[i]]);
 	} else {
 	  if ( i %RANKS == 0 )
 	    if ( !same_rank )
-	      fprintf( fd,"║\e[1m↑%s\e[0m", upper_kanji_string[piece[i]]);
+	      fprintf( fd,"║↑%s\e[0m", upper_kanji_string[piece[i]]);
 	    else
-	      fprintf( fd,"║\e[1m↑%s\e[0m", lower_kanji_string[piece[i]]);
+	      fprintf( fd,"║↑%s\e[0m", lower_kanji_string[piece[i]]);
 	  else
 	    if ( !same_rank )
-	      fprintf( fd,"│\e[1m↑%s\e[0m", upper_kanji_string[piece[i]]);
+	      fprintf( fd,"│↑%s\e[0m", upper_kanji_string[piece[i]]);
 	    else
-	      fprintf( fd,"│\e[1m↑%s\e[0m", lower_kanji_string[piece[i]]);
+	      fprintf( fd,"│↑%s\e[0m", lower_kanji_string[piece[i]]);
 	}
 	break;
       case DARK:
@@ -2385,14 +2385,14 @@ void show_moves( void ) {
 	  case LIGHT:
 	    if ( i %RANKS == 15 )
 	      if ( !same_rank )
-		  printf("║\e[1m↓%s\e[0m", upper_kanji_string[piece[i]]);
+		  printf("║↓%s\e[0m", upper_kanji_string[piece[i]]);
 		else
-		  printf("║\e[1m↓%s\e[0m", lower_kanji_string[piece[i]]);
+		  printf("║↓%s\e[0m", lower_kanji_string[piece[i]]);
 	      else
 		if ( !same_rank )
-		  printf("│\e[1m↓%s\e[0m", upper_kanji_string[piece[i]]);
+		  printf("│↓%s\e[0m", upper_kanji_string[piece[i]]);
 		else
-		  printf("│\e[1m↓%s\e[0m", lower_kanji_string[piece[i]]);
+		  printf("│↓%s\e[0m", lower_kanji_string[piece[i]]);
 	    break;
 	  case DARK:
 	    if ( i %RANKS == 15 )
@@ -2477,14 +2477,14 @@ void show_moves( void ) {
 	  case LIGHT:
 	    if ( i %RANKS == 0 )
 	      if ( !same_rank )
-		printf( "║%s\e[1m %s\e[0m", color_string[var_board[i]], upper_kanji_string[piece[i]]);
+		printf( "║%s %s\e[0m", color_string[var_board[i]], upper_kanji_string[piece[i]]);
 	      else
-		printf( "║%s\e[1m %s\e[0m", color_string[var_board[i]], lower_kanji_string[piece[i]]);
+		printf( "║%s %s\e[0m", color_string[var_board[i]], lower_kanji_string[piece[i]]);
 	    else
 	      if ( !same_rank )
-		printf( "│%s\e[1m %s\e[0m", color_string[var_board[i]], upper_kanji_string[piece[i]]);
+		printf( "│%s %s\e[0m", color_string[var_board[i]], upper_kanji_string[piece[i]]);
 	      else
-		printf( "│%s\e[1m %s\e[0m", color_string[var_board[i]], lower_kanji_string[piece[i]]);
+		printf( "│%s %s\e[0m", color_string[var_board[i]], lower_kanji_string[piece[i]]);
 	    break;
 	  case DARK:
 	    if ( i %RANKS == 0 )
@@ -2525,14 +2525,14 @@ void show_moves( void ) {
 	  case LIGHT:
 	    if ( i %RANKS == 0 )
 	      if ( !same_rank )
-		printf( "║ \e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+		printf( "║ %s\e[0m", upper_kanji_string[piece[i]]);
 	      else
-		printf( "║ \e[1m%s\e[0m", lower_kanji_string[piece[i]]);
+		printf( "║ %s\e[0m", lower_kanji_string[piece[i]]);
 	    else
 	      if ( !same_rank )
-		printf( "│ \e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+		printf( "│ %s\e[0m", upper_kanji_string[piece[i]]);
 	    else
-	      printf( "│ \e[1m%s\e[0m", lower_kanji_string[piece[i]]);
+	      printf( "│ %s\e[0m", lower_kanji_string[piece[i]]);
 	    break;
 	  case DARK:
 	    if ( i %RANKS == 0 )
@@ -2579,10 +2579,10 @@ void show_moves( void ) {
 	    break;
 	  case LIGHT:
 	    if ( i % RANKS == 0 )
-	      printf("║%s\e[1m%s\e[0m", 
+	      printf("║%s\e[4m%s\e[0m", 
 		     color_string[var_board[i]], kanji_piece_string[piece[i]]);
 	    else
-	      printf("│%s\e[1m%s\e[0m", 
+	      printf("│%s\e[4m%s\e[0m", 
 		     color_string[var_board[i]], kanji_piece_string[piece[i]]);
 	    break;
 	  case DARK:
@@ -2604,9 +2604,9 @@ void show_moves( void ) {
 	    break;
 	  case LIGHT:
 	    if ( i % RANKS == 0 )
-	      printf("║\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	      printf("║\e[4m%s\e[0m", kanji_piece_string[piece[i]]);
 	    else
-	      printf("│\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	      printf("│\e[4m%s\e[0m", kanji_piece_string[piece[i]]);
 	    break;
 	  case DARK:
 	    if ( i % RANKS == 0 )
@@ -2634,9 +2634,9 @@ void show_moves( void ) {
 	    break;
 	  case LIGHT:
 	    if ( i % RANKS == 0 )
-	      printf("║%s\e[1m%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
+	      printf("║%s\e[4m%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
 	    else
-	      printf("│%s\e[1m%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
+	      printf("│%s\e[4m%s\e[0m", color_string[var_board[i]], piece_string[piece[i]]);
 	    break;
 	  case DARK:
 	    if ( i % RANKS == 0 )
@@ -2655,9 +2655,9 @@ void show_moves( void ) {
 	    break;
 	  case LIGHT:
 	    if ( i % RANKS == 0 )
-	      printf("║\e[1m%s\e[0m", piece_string[piece[i]]);
+	      printf("║\e[4m%s\e[0m", piece_string[piece[i]]);
 	    else
-	      printf("│\e[1m%s\e[0m", piece_string[piece[i]]);
+	      printf("│\e[4m%s\e[0m", piece_string[piece[i]]);
 	    break;
 	  case DARK:
 	    if ( i % RANKS == 0 )
@@ -2911,14 +2911,14 @@ void show_influence( void ) {
 	case LIGHT:
 	  if ( i %RANKS == 0 )
 	    if ( !same_rank )
-	      printf( "║%s\e[1m %s\e[0m",inf_color[var_board[i]], upper_kanji_string[piece[i]]);
+	      printf( "║%s %s\e[0m",inf_color[var_board[i]], upper_kanji_string[piece[i]]);
 	    else
-	      printf( "║%s\e[1m %s\e[0m",inf_color[var_board[i]], lower_kanji_string[piece[i]]);
+	      printf( "║%s %s\e[0m",inf_color[var_board[i]], lower_kanji_string[piece[i]]);
 	  else
 	    if ( !same_rank )
-	      printf( "│%s\e[1m %s\e[0m",inf_color[var_board[i]], upper_kanji_string[piece[i]]);
+	      printf( "│%s %s\e[0m",inf_color[var_board[i]], upper_kanji_string[piece[i]]);
 	    else
-	      printf( "│%s\e[1m %s\e[0m",inf_color[var_board[i]], lower_kanji_string[piece[i]]);
+	      printf( "│%s %s\e[0m",inf_color[var_board[i]], lower_kanji_string[piece[i]]);
 	  break;
 	case DARK:
 	  if ( i %RANKS == 0 )
@@ -2959,14 +2959,14 @@ void show_influence( void ) {
 	case LIGHT:
 	  if ( i %RANKS == 0 )
 	    if ( !same_rank )
-	      printf( "║ \e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+	      printf( "║ %s\e[0m", upper_kanji_string[piece[i]]);
 	    else
-	      printf( "║ \e[1m%s\e[0m", lower_kanji_string[piece[i]]);
+	      printf( "║ %s\e[0m", lower_kanji_string[piece[i]]);
 	  else
 	    if ( !same_rank )
-	      printf( "│ \e[1m%s\e[0m", upper_kanji_string[piece[i]]);
+	      printf( "│ %s\e[0m", upper_kanji_string[piece[i]]);
 	    else
-	      printf( "│ \e[1m%s\e[0m", lower_kanji_string[piece[i]]);
+	      printf( "│ %s\e[0m", lower_kanji_string[piece[i]]);
 	  break;
 	case DARK:
 	  if ( i %RANKS == 0 )
@@ -3013,9 +3013,9 @@ void show_influence( void ) {
 	  break;
 	case LIGHT:
 	  if ( i % RANKS == 0 )
-	    printf("║%s\e[1m%s\e[0m",inf_color[var_board[i]], kanji_piece_string[piece[i]]);
+	    printf("║%s\e[4m%s\e[0m",inf_color[var_board[i]], kanji_piece_string[piece[i]]);
 	  else
-	    printf("│%s\e[1m%s\e[0m",inf_color[var_board[i]], kanji_piece_string[piece[i]]);
+	    printf("│%s\e[4m%s\e[0m",inf_color[var_board[i]], kanji_piece_string[piece[i]]);
 	  break;
 	case DARK:
 	  if ( i % RANKS == 0 )
@@ -3034,9 +3034,9 @@ void show_influence( void ) {
 	  break;
 	case LIGHT:
 	  if ( i % RANKS == 0 )
-	    printf("║\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	    printf("║\e[4m%s\e[0m", kanji_piece_string[piece[i]]);
 	  else
-	    printf("│\e[1m%s\e[0m", kanji_piece_string[piece[i]]);
+	    printf("│\e[4m%s\e[0m", kanji_piece_string[piece[i]]);
 	  break;
 	case DARK:
 	  if ( i % RANKS == 0 )
@@ -3064,9 +3064,9 @@ void show_influence( void ) {
 	  break;
 	case LIGHT:
 	  if ( i % RANKS == 0 )
-	    printf("║\e[45m\e[1m%s\e[0m", piece_string[piece[i]]);
+	    printf("║\e[45m\e[4m%s\e[0m", piece_string[piece[i]]);
 	  else
-	    printf("│\e[45m\e[1m%s\e[0m", piece_string[piece[i]]);
+	    printf("│\e[45m\e[4m%s\e[0m", piece_string[piece[i]]);
 	  break;
 	case DARK:
 	  if ( i % RANKS == 0 )
@@ -3085,9 +3085,9 @@ void show_influence( void ) {
 	  break;
 	case LIGHT:
 	  if ( i % RANKS == 0 )
-	    printf("║\e[1m%s\e[0m", piece_string[piece[i]]);
+	    printf("║\e[4m%s\e[0m", piece_string[piece[i]]);
 	  else
-	    printf("│\e[1m%s\e[0m", piece_string[piece[i]]);
+	    printf("│\e[4m%s\e[0m", piece_string[piece[i]]);
 	  break;
 	case DARK:
 	  if ( i % RANKS == 0 )

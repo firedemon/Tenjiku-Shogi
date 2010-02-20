@@ -33,7 +33,7 @@ MYSQL *conn;
 char local_player[128];
 char network_player[128];
 char game_id[20] = "";
-
+char real_server[128];
 #endif
 
 unsigned char *side_name[2] = { "Sente", "Gote" };
@@ -281,18 +281,34 @@ int main(int argc,  char **argv)
 	    gen();
 	    continue;
 	  } else if ( networked_game && (side == network_side )) {
-		  idx = get_network_move(); /* look for incoming move */
-		  if ( !makemove(gen_dat[idx].m.b)) {
-		    printf("Illegal move.\n");
-		    fflush(stdout);
-		  } else {
-		    undo_dat[undos] = hist_dat[0];
-		    ++undos;
-		    redos=0;  /* new line, so clear old redo stack */
-		    print_board(stdout);
-		    ply = 0;
-		    gen();
-		  }
+	    idx = get_network_move(); /* look for incoming move */
+	    switch ( idx ) {
+	    case TENJIKU_NOOPPONENT:
+	      printf("Our opponent seems to have disappeared.\n");
+	      printf("Logging out from the server.\n");
+	      side ^= 1;
+	      xside ^= 1;
+	      network_logout();
+	      networked_game = FALSE;
+	      side ^= 1;
+	      xside ^= 1;
+	      break;
+	    case TENJIKU_NOSERVER:
+	      printf("We have some problem with the mysql server.\n");
+	      break;
+	    default:
+	      if ( !makemove(gen_dat[idx].m.b)) {
+		printf("Illegal move.\n");
+		fflush(stdout);
+	      } else {
+		undo_dat[undos] = hist_dat[0];
+		++undos;
+		redos=0;  /* new line, so clear old redo stack */
+		print_board(stdout);
+		ply = 0;
+		gen();
+	      }
+	    }
 	  } else {
 	    s = rl_gets();
 	    if (!strcmp(s, "quiesce")) {
@@ -570,10 +586,7 @@ int main(int argc,  char **argv)
 	    }
 	    if (!strcmp(s, "bye") || !strcmp(s, "quit")) {
 	      printf("Share and enjoy!\n");
-	      if ( conn ) { /* are we connected */
-		printf("Closing connection to database ...\n");
-		mysql_close(conn);
-	      }
+	      network_logout();
 	      exit(0);
 	    }
 	    if (!strcmp(s, "create")) {
@@ -729,16 +742,16 @@ int main(int argc,  char **argv)
 	      fflush(stdout);
 	    } else {
 	      /* save the "backup" data because it will be overwritten */
-	      if ( networked_game ) { 
-		printf("sending move idx (2): %d", i);
-		sprintf(net_move,"%d",i);
-		send_network_move(net_move);
-	      }
 	      strcpy(before_last_move,s);
 	      undo_dat[undos] = hist_dat[0];
 	      ++undos;
 	      redos=0;  /* new line, so clear old redo stack */
 	      print_board(stdout);
+	      if ( networked_game ) { 
+		/* printf("sending move idx (2): %d", i); */
+		sprintf(net_move,"%d",i);
+		send_network_move(net_move, i);
+	      }
 	      ply = 0;
 	      gen();
 	    }
@@ -1993,7 +2006,10 @@ void really_load_game( char *fn ) {
   fclose(fh);
   print_board(stdout);
   fflush(stdout);
-}
+
+} /* really_load_game */
+
+
 
 void load_old_game( void ) {
   unsigned char fullfn[1024], fn[1024], s[15];
@@ -3230,7 +3246,7 @@ void undo_move( void ) {
   takeback();
   gen();
   if (networked_game) {
-    send_network_move("undo");
+    send_network_move("undo",-1);
   }
 }
 
@@ -3246,7 +3262,7 @@ void redo_move( void ) {
   /* gen(); */
   makemove(hist_dat[0].m.b);
   if (networked_game) {
-    send_network_move("redo");
+    send_network_move("redo",-1);
   }
 }
 
@@ -3404,12 +3420,16 @@ BOOL connect_db( char *server_name ) {
   fprintf(stderr,"Install a mysql client with development files and recompile.\n");
   return( FALSE );
 #else
-  char real_server[128];
+  int i;
+  char msql_stat[2048];
+  char msql_stat2[2048];
   char query[1024];
   char whoami[24];
   char start_new;
+  BOOL sente_online = FALSE;
+  BOOL gote_online = FALSE;
   MYSQL_RES *res;
-  MYSQL_ROW *row;
+  MYSQL_ROW row;
 
   printf("What is your name? ");
   scanf("%s",whoami);
@@ -3430,7 +3450,10 @@ BOOL connect_db( char *server_name ) {
     }
     printf("Connected to mysql server on localhost.\n");
   } else { /* connect to other computer */
-    scanf("Enter server to connect to: %s", real_server);
+
+    printf("Enter server to connect to: ");
+    scanf("%s", real_server);
+
     if (mysql_real_connect(conn, real_server, "tenjiku", "tenjiku", "tenjiku", 0, NULL, 0) == NULL) {
       printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
       return(FALSE);
@@ -3440,14 +3463,15 @@ BOOL connect_db( char *server_name ) {
   /* do I have unfinished games? */
   /* select from games player, opponent, options, 
      started = yes, finished = no */
-  sprintf(query, "select all game_id, player, opponent, options, moves_so_far from games where (player='%s' or opponent = '%s')  and started != '0' and finished = 'no'", whoami, whoami);
-  printf("%s\n", query); 
+  sprintf(query, "select all game_id, player, opponent, options, move_indices from games where (player='%s' or opponent = '%s')  and started != '0' and finished = 'no'", whoami, whoami);
+  /* printf("%s\n", query); */
   if ( mysql_query(conn, query) ) {
     printf("An error has occurred. (1)\n");
     return( FALSE );
   }
   res = mysql_use_result( conn );
   while ( row = mysql_fetch_row( res ) ) {
+    strcpy(game_id,(char *)row[0]);	strcpy(game_id,(char *)row[0]);
     printf("Unfinished game: %s - %s: (a)bort, (c)ontinue, (s)kip?\n", 
 	   (char *)row[1], (char *)row[2]);
     while (( start_new = getchar() ) != EOF )
@@ -3461,7 +3485,67 @@ BOOL connect_db( char *server_name ) {
       printf("skipping game\n");
       break;
     case 'c':
-      load_game_from_db( row );
+      init();
+      if ( load_game_from_db( res, (char *)row[4]) ) {
+	/* am I sente or gote? */
+	if ( strcmp(whoami, (char *)row[1]) ) { /* I am gote */
+	  /* printf("GOTE\n"); */
+	  network_side = 0; 
+	  gote_online = TRUE;
+	  strcpy(network_player,(char *)row[1]);
+	  strcpy(local_player,(char *)row[2]);
+	  rotated = TRUE;
+	} else {  /* I am sente */
+	  /* printf("SENTE\n"); */
+	  network_side = 1;
+	  sente_online = TRUE;
+	  strcpy(network_player,(char *)row[2]);
+	  strcpy(local_player,(char *)row[1]);
+	  rotated = FALSE;
+	}
+	networked_game = TRUE;
+	print_board( stdout );
+	/* now wait for the opponent to arrive */
+	
+	/* mysql_free_result( res ); this one is new, does it break anything? */
+	
+	if ( sente_online ) {
+	  sprintf( msql_stat, "update games set sente_online='yes' where game_id='%s'", game_id);
+	  sprintf( msql_stat2, "select sente_online from games where gote_online='yes' and game_id='%s'", game_id);
+	} else if (gote_online) {
+	  sprintf( msql_stat, "update games set gote_online='yes' where game_id='%s'", game_id);
+	  sprintf( msql_stat2, "select sente_online from games where sente_online='yes' and game_id='%s'", game_id);
+	}
+	if ( mysql_query( conn, msql_stat ))  {
+	  printf("Hmmm, something's wrong with the connection: %s\n", mysql_error( conn ));
+	}
+
+	while ( i++ < MAXWAIT ) {
+	  sleep( 1);
+	  /* has something changed? */
+	  if ( mysql_query( conn, msql_stat2 ))  {
+	    printf("Hmmm, something's wrong with the connection: %s\n", mysql_error( conn ));
+      
+	  } else {
+	    /* check for non-nil opponent */
+	    res = mysql_use_result(conn);
+	    row = mysql_fetch_row( res );
+	    if ( row ) { /* this one's not sufficient */    
+	      printf("%s has joined the game.\n", network_player);
+	      mysql_free_result( res );
+	      return;
+	    } else {
+	      printf(".");
+	      mysql_free_result( res );
+	    }
+	    fflush(stdout);
+	  }
+	}
+	return;
+      } else {
+	printf("Cannot load game.\n");
+      }
+      return;
     }
   }
   /* are there games w.o. opponent? */
@@ -3509,14 +3593,16 @@ BOOL connect_db( char *server_name ) {
       mysql_free_result( res );
     } else {
       printf("OK, closing connection to server then\n");
-      if ( conn )
+      if ( conn ) {
 	mysql_close( conn );
-      else
+	conn = NULL;
+      } else
 	printf("Hmmm, the connection is already down ...\n");
     }
   return( TRUE );
 #endif
 }
+
 
 void check_db( void ) {
 #ifdef NETWORKING
@@ -3527,13 +3613,14 @@ void check_db( void ) {
 #else
   ;
 #endif
-}
+} /* check_db */
 
-void send_network_move( char *thismove ) {
+void send_network_move( char *thismove, int idx ) {
 #ifdef NETWORKING
-  char msql_stat[128];
+  char msql_stat[1024];
  
   mysql_close( conn );
+  conn = NULL;
 
   conn = mysql_init(NULL);
   
@@ -3542,7 +3629,7 @@ void send_network_move( char *thismove ) {
     return;
   }
 
-  if (mysql_real_connect(conn, "localhost", "tenjiku", "tenjiku", "tenjiku", 0, NULL, 0) == NULL) {
+  if (mysql_real_connect(conn, real_server, "tenjiku", "tenjiku", "tenjiku", 0, NULL, 0) == NULL) {
     printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
     return;
   }
@@ -3550,36 +3637,57 @@ void send_network_move( char *thismove ) {
  if ( mysql_query( conn, "commit" )) 
     printf("send_network_move: Hmmm, something's wrong with the connection: %s\n", mysql_error( conn )); 
   if (! strcmp(thismove, "")) return;
-  sprintf(msql_stat,"update games set last_move = '%s' where game_id = '%s'", thismove, game_id);
-  printf("%s\n", msql_stat);
+  /* now set your own side move to -1, the other side to the move idx sent */
+  /* the move is already made so the other side is to move, therefore we'll have to check
+   the other way round */
+  if ( side ) { /* Gote to move, so I am Sente */
+    sprintf(msql_stat,"update games set last_move_sente = '%s', last_move_gote='-1', moves_so_far= concat( moves_so_far, '\n%s %s'), move_indices=concat(move_indices,',%s') where game_id = '%s'", thismove, unpadded_piece_string[ hist_dat[0].oldpiece ], half_move_str(gen_dat[idx].m.b), thismove, game_id);
+  } else {
+    sprintf(msql_stat,"update games set last_move_sente = '-1', last_move_gote = '%s', moves_so_far= concat( moves_so_far, '\n%s %s'), move_indices=concat(move_indices,',%s') where game_id = '%s'", thismove, unpadded_piece_string[ hist_dat[0].oldpiece ], half_move_str(gen_dat[idx].m.b), thismove, game_id);
+  }
+  /* printf("%s\n", msql_stat); */
   if ( mysql_query( conn, msql_stat )) 
     printf("send_network_move: Hmmm, something's wrong with the connection: %s\n", mysql_error( conn ));
   strcpy(global_last_move, thismove);
+
+
 #else
   ;
 #endif
 }
 
 int get_network_move( void ){ 
+
   /* keep checking the database until a new move appears in last_move, make it */
   /* this should also check whether the other player has gone away */
-  /* and save the position in a local file if the connection is gone */
-  int move_idx;
-  while ( 1) {
+  /* and save the position in a local file if the connection is gone 
+     returns move index (from gen), TENJIKU_NOMOVE for no move, TENJIKU_NOSERVER for network error, TENJIKU_NOOPPONENT
+     if opponent has gone away */
+
+  int move_idx, i = 0;
+  while ( i < TENJIKU_NOMOVE_TIMEOUT ) {
     move_idx = check_network_move(); 
-    if (  move_idx != -1 )
-      return(move_idx);
+    if (  move_idx != TENJIKU_NOMOVE ) {
+	printf("\a");
+	return(move_idx);
+    }
     sleep( 1);
+    i++;
   }
+  return( TENJIKU_NOOPPONENT );
 }
   
 int check_network_move( void ) {
+  /*
+    returns move index (from gen), TENJIKU_NOMOVE for no move, TENJIKU_NOSERVER for network error, TENJIKU_NOOPPONENT
+    if opponent has gone away */
  
-  char msql_stat[128], msql_stat2[128];
-  char last_move[64];
+  char msql_stat[1024], msql_stat2[1024];
+  char last_move[128];
   MYSQL_RES *res;
-  MYSQL_ROW *row;
+  MYSQL_ROW row;
   int move_idx;
+  char *p;
 
   mysql_close( conn );
 
@@ -3587,46 +3695,95 @@ int check_network_move( void ) {
   
   if (conn == NULL) {
     printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
-    return(-1);
+    return(TENJIKU_NOSERVER);
   }
 
-  if (mysql_real_connect(conn, "localhost", "tenjiku", "tenjiku", "tenjiku", 0, NULL, 0) == NULL) {
+  if (mysql_real_connect(conn, real_server, "tenjiku", "tenjiku", "tenjiku", 0, NULL, 0) == NULL) {
     printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
-    return(-1);
+    return(TENJIKU_NOSERVER);
   }
 
 
   /*  printf("checking ... "); */
-  sprintf(msql_stat, "select all last_move from games where game_id = '%s'", game_id);
-  sprintf(msql_stat2, "update games set last_move='' where game_id = '%s'", game_id);
+  if ( xside ) { /* I am gote, has Sente moved? */
+    sprintf(msql_stat, "select all last_move_sente, sente_online from games where game_id = '%s'", game_id);
+    sprintf(msql_stat2, "update games set last_move_sente='-1' where game_id = '%s'", game_id);
+  } else {
+    sprintf(msql_stat, "select all last_move_gote, gote_online from games where game_id = '%s'", game_id);
+    sprintf(msql_stat2, "update games set last_move_gote='-1' where game_id = '%s'", game_id);
+  }
   
   /* has something changed? */
   if ( mysql_query( conn, msql_stat )) {
-    printf("%s\n", msql_stat); 
+    /* printf("%s\n", msql_stat); */
     printf("check_network_move: Hmmm, something's wrong with the connection: %s\n", mysql_error( conn ));
-    return(-1);
+    return(TENJIKU_NOSERVER);
   } else {
-    /* check for non-nil opponent */
+    /* check if opponent  is still online */
+
     res = mysql_use_result(conn);
     row = mysql_fetch_row( res );
+    if ( row == NULL ) {
+      return(TENJIKU_NOSERVER);
+    }
+
+    if ( strcmp((char*)row[1],"yes") ) { /* 'no' in xxx_online */
+      return( TENJIKU_NOOPPONENT );
+    }
       if ( strcmp((char*)row[0],"") &&
 	   strcmp((char*)row[0],global_last_move)) { /* a move or command has arrived */
 	strcpy(last_move,(char*)row[0]);
-	move_idx = row[0];
-	printf("Got a move: %s\n", last_move);
+	move_idx = strtol(last_move, &p, 10 );
+	/* printf("Got a move: %d as %s\n", move_idx, last_move); */
+
 	mysql_free_result( res );
 	if ( mysql_query( conn, msql_stat2 )) {
 	  printf("check_network_move(2): Hmmm, something's wrong with the connection: %s\n", mysql_error( conn ));
-	  return(-1);
+	  return(TENJIKU_NOSERVER);
 	}
 	return( move_idx );
       }
   }
 }
 
+void network_logout( void ) {
+  /* no need to update networked_game and friends as this is called
+     right before exit */
+#ifdef NETWORKING
+  char msql_stat[1024];
+
+  if ( conn ) { /* are we connected */
+    printf("Closing connection to database ...\n");
+    mysql_close(conn);
+    conn = NULL; /* just in case */
+  }
+  conn = mysql_init(NULL);
+  
+  if (conn == NULL) {
+    printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
+    return;
+  }
+
+  if (mysql_real_connect(conn, real_server, "tenjiku", "tenjiku", "tenjiku", 0, NULL, 0) == NULL) {
+    printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
+    return;
+  }
+  if ( xside ) {
+    sprintf(msql_stat, "update games set sente_online='no' where game_id='%s'", game_id);
+  } else {
+    sprintf(msql_stat, "update games set gote_online='no' where game_id='%s'", game_id);
+  }
+  mysql_query( conn, msql_stat );
+  mysql_close( conn );
+  conn = NULL;
+#else
+  ;
+#endif
+}
+
 #ifdef NETWORKING
 
-void abort_game(  MYSQL_ROW *row ) {
+void abort_game(  MYSQL_ROW row ) {
   /* marks the game in row as finished */
 
   char ask;
@@ -3652,16 +3809,47 @@ void abort_game(  MYSQL_ROW *row ) {
     }
 }
 
-void load_game_from_db( MYSQL_ROW *row) {
-  
-  printf("Loading game from db ...");
-  /* get the moves in row[3] and options in row[2] and make them */
-  /* get last_move as well, that's the one we'll be looking for */
-  printf("done!\n");
-}
+/* the following will be made obsolete as the indices aren't generated the 
+   same way for some reason */
+BOOL load_game_from_db(MYSQL_RES *res, char *move_indices) {
+  char *next = NULL;
+  char *r, *p;
+  long idx;
 
-void join_game( MYSQL_RES *res, MYSQL_ROW *row, char *whoami, int which ) {
+  printf("Loading game from db ...");
+  /* game_id 0, sente 1, gote 2, options 3, started 4, finished 5, moves_so_far 6, 
+     last_move_sente 7, last_move_gote 8, sente_online 9, gote_online 10, move_indices 11 */
+
+  mysql_free_result( res );
+  
+  r = move_indices;
+  r++;
+  next = strtok( r, "," );
+  while ( next != NULL ) {
+    idx = strtol( next, &p, 10 );
+    if ( !makemove(gen_dat[idx].m.b) ) {
+      printf("Illegal move index %ld in db.\n", idx);
+      return( FALSE );
+    } else {
+      printf("Loading move %s, idx %ld for %s\n", 
+	     side_name[xside], idx, half_move_str(gen_dat[idx].m.b));
+      undo_dat[undos] = hist_dat[0];
+      ++undos;
+      ply = 0;
+      gen();
+    }
+    next = strtok( NULL, "," );
+  }
+
+  printf("done!\n");
+  return( TRUE );
+
+} /* load_game_from_db */
+
+void join_game( MYSQL_RES *res, MYSQL_ROW row, char *whoami, int which ) {
   /* which is 0 for sente, 1 for gote */
+  /* joins a new game */
+
   char query1[128], query2[128];
   char nplayer[128];
   int err;  
@@ -3669,20 +3857,20 @@ void join_game( MYSQL_RES *res, MYSQL_ROW *row, char *whoami, int which ) {
 
   sprintf(query1, "delete from games where player='%s' and opponent='%s' and options='%s' and started = '0'", (char *)row[1], (char *)row[2], (char *)row[3]);
   if ( which ) { /* options aren't used yet */
-    sprintf(query2,"insert into games values ('%s', '%s', '%s', '', now()+0, 'no', '', '')", (char *)row[0],
+    sprintf(query2,"insert into games values ('%s', '%s', '%s', '', now()+0, 'no', '', '-1', '-1', 'yes', 'yes', '')", (char *)row[0],
 	   whoami, (char *)row[2] );
     strcpy(nplayer,(char *)row[2]);
     network_side = xside;
     
   } else {
-    sprintf(query2,"insert into games values ('%s', '%s', '%s', '', now()+0, 'no', '', '')", (char *)row[0],
+    sprintf(query2,"insert into games values ('%s', '%s', '%s', '', now()+0, 'no', '', '-1', '-1', 'yes', 'yes', '')", (char *)row[0],
 	   (char *)row[1], whoami );
     strcpy(nplayer,(char *)row[1]);
     network_side = side;
     rotated = TRUE;
   }
 
-  printf("%s\n",query2);
+  /* printf("%s\n",query2); */
 
   strcpy(game_id, (char *)row[0]);
 
@@ -3700,7 +3888,7 @@ void join_game( MYSQL_RES *res, MYSQL_ROW *row, char *whoami, int which ) {
     return;
   };
 
-  printf("%s\n",query1);
+  /* printf("%s\n",query1); */
 
   if ( mysql_query( conn, query1 )) {
     printf("Couldn't delete game request: %s\n", mysql_error( conn ));
@@ -3721,13 +3909,13 @@ void join_game( MYSQL_RES *res, MYSQL_ROW *row, char *whoami, int which ) {
 void new_db_game( char *whoami ) {
 
   char ask;
-  char msql_stat[128];
+  char msql_stat[1024];
   struct tm *tmp;
   time_t t;
   int i;
 
   MYSQL_RES *res;
-  MYSQL_ROW *row;
+  MYSQL_ROW row;
   /* check whether I haven't got a game running or started */
 
   if ( strcmp(game_id,"") ) {
@@ -3743,7 +3931,7 @@ void new_db_game( char *whoami ) {
  
 
   printf("OK starting new game. ");
-  printf("Do you want to play Sente (Black) or Gote (White)? (s/g)");
+  printf("Do you want to play Sente (Black) or Gote (White)? (s/g) ");
 
   
   while (( ask = getchar() ) != EOF )
@@ -3752,14 +3940,14 @@ void new_db_game( char *whoami ) {
 
   if ( ask == 's') {
     network_side = xside;
-    sprintf(msql_stat, "insert into games values ('%s', '%s', 'nil', '', '0', 'no', '', '')", game_id, whoami);
+    sprintf(msql_stat, "insert into games values ('%s', '%s', 'nil', '', '0', 'no', '', '-1', '-1', 'yes', 'no', '')", game_id, whoami);
   } else {
     network_side = side;
-    sprintf(msql_stat, "insert into games values ('%s', 'nil', '%s', '', '0', 'no', '', '')", game_id, whoami);
+    sprintf(msql_stat, "insert into games values ('%s', 'nil', '%s', '', '0', 'no', '', '-1', '-1', 'no', 'yes', '')", game_id, whoami);
   }
 
   /* now insert values into table */
-  printf("%s\n", msql_stat);
+  /* printf("%s\n", msql_stat); */
   if ( mysql_query( conn, msql_stat )) {
     printf("Couldn't add new game to database. Sorry.\n");
     return;

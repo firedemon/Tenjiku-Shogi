@@ -1,11 +1,11 @@
 ---------------------- TODO -------------------------
 
 to fix:
+
 - put player's names to sente and gote in networked game
-- make moves work (put the full move on the db server)
-- loading games not implemented
+- detecting the other's online status not working on resume
 - aborting game won't work (result must be freed first)
-- check whether other player has left the game
+- show_moves buggy for fullkanji and rotated board
 
 - add promoted WBs to the list of FiDs
 - spurious "Illegal move" on eof

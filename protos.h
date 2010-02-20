@@ -75,6 +75,10 @@ void process_arguments(int argc, char **argv);
 int main();
 unsigned char *move_str(move_bytes m);
 unsigned char *half_move_str(move_bytes m);
+unsigned char *ascii_move_str(move_bytes m);
+unsigned char *kanji_move_str(move_bytes m);
+unsigned char *fullkanji_move_str(move_bytes m);
+
 
 void print_board( FILE *fd );
 
@@ -149,14 +153,15 @@ void check_db( void );
 BOOL connect_db( char *server_name );
 int get_network_move( void );
 int check_network_move( void );
-void send_network_move( char *s);
+void send_network_move( char *s, int idx );
+void network_logout( void );
 
 #ifdef NETWORKING
 
 void new_db_game( char *whoami);
-void join_game( MYSQL_RES *res, MYSQL_ROW *row, char *whoami, int which);
-void abort_game( MYSQL_ROW *row);
-void load_game_from_db( MYSQL_ROW *row);
+void join_game( MYSQL_RES *res, MYSQL_ROW row, char *whoami, int which);
+void abort_game( MYSQL_ROW row);
+BOOL load_game_from_db( MYSQL_RES *res, char *move_indices );
 
 
 #endif

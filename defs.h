@@ -22,12 +22,22 @@
 
 #define japanese_HT 1
 
-#define MAXWAIT 30
+#define MAXWAIT 60
 /* number of seconds to wait for a connection */
+
+#define TENJIKU_NOMOVE_TIMEOUT  3600
+
+/* number of seconds to wait for a move before we assume
+   the opponent has gone away */
 
 /************************************/
 /*  end of user-configurable stuff  */
 /************************************/
+
+#define TENJIKU_NOMOVE          -1
+#define TENJIKU_NOSERVER        -2
+#define TENJIKU_NOOPPONENT      -3
+
 
 #define BOOL			int
 #define TRUE			1

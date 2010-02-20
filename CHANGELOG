@@ -1,5 +1,10 @@
 --------------------- CHANGELOG ----------------------
 Latest changes:
+2010.02.20
+- moving over network works
+- detected if opponent locks out
+- loading games implemented
+
 2010.02.19
 - adding games and joining works
 - reading out the moves works 

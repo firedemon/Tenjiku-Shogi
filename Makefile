@@ -1,22 +1,23 @@
 #CFLAGS= -DDEBUG -DDEBUG -DMOVELOG -DSTACKLOG  -lgdbm -g -pg  -fbounds-checking
-CFLAGS=  -g   -DCENTIPLY -DQUIESCE
+CFLAGS=  -g   -DCENTIPLY -DQUIESCE -DNETWORKING
 #CFLAGS=-g -DEVAL_INFLUENCE -DCENTIPLY -fbounds-checking -DDEBUG
 #CFLAGS=-O3 -DEVAL_INFLUENCE -DCENTIPLY -fomit-frame-pointer -mpentiumpro -march=pentiumpro -malign-functions=4 -funroll-loops -fexpensive-optimizations -malign-double -fschedule-insns2 -mwide-multiply
 # -DCENTIPLY
 #LDFLAGS = -lgdbm 
 #CFLAGS=  -g -pg
-LDFLAGS =  -lgdbm -lreadline
-# LDFLAGS =  -lgdbm -lreadline -lncurses
+LDFLAGS =  -lgdbm -lreadline `mysql_config --cflags --libs`
+LDCURSESFLAGS =  -lncurses
 
 
 # all: tenjiku tenjiku-nox11 tenjiku.book.in TeX
-all: tenjiku
+all: tenjiku 
 
 tenjiku.book.in: book.pl book.dat
 	perl book.pl book.dat > tenjiku.book.in
 
 tenjiku: board.o data-ansi.o eval.o main-ansi.o search.o book.o kbhit.o
 	gcc  ${CFLAGS} -o tenjiku board.o data-ansi.o eval.o main-ansi.o search.o book.o kbhit.o ${LDFLAGS}
+
 
 book.o: book.c data.h defs.h protos.h Makefile
 	gcc  ${CFLAGS} -c book.c

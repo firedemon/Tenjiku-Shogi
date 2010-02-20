@@ -1,5 +1,19 @@
 --------------------- CHANGELOG ----------------------
 Latest changes:
+2010.02.19
+- adding games and joining works
+- reading out the moves works 
+- rotate gote's board by default
+
+2010.02.18
+- burned pieces show up in savegame
+- show suicide in savegame
+- fix really_load_game accordingly
+- added mysql stuff
+
+2010.02.16
+- contacting mysql server implemented
+
 2010.02.12
 - removed ranging VSd completely (it was only me having read the rules incorrectly)
 - fixed typo in the western HT
@@ -115,3 +129,4 @@ fixed the following in TeX export
 -added redo
 -added go to position after move
 
+ 

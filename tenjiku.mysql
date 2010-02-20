@@ -1,0 +1,64 @@
+create user 'tenjiku'@'localhost' identified by 'tenjiku';
+create user 'tenjiku'@'%' identified by 'tenjiku';
+use mysql;
+grant all privileges on mysql to 'tenjiku'@'localhost';
+grant all privileges on mysql to 'tenjiku'@'%';
+revoke drop on mysql from 'tenjiku'@'localhost';
+revoke drop on mysql from 'tenjiku'@'%';
+create database tenjiku;
+use tenjiku;
+grant all privileges on tenjiku to 'tenjiku'@'localhost';
+revoke drop on tenjiku from 'tenjiku'@'localhost';
+grant all privileges on tenjiku to 'tenjiku'@'%';
+revoke drop on tenjiku from 'tenjiku'@'%';
+
+========================================================
+[local saves to files ok]
+if ready to connect put tag into mysql (somehow)
+check regularly for connections -> check for new entry in games
+-------------------------------
+how to negotiate who's who? (might not be a problem - one person makes the first move, and then the other one just gets it)
+how to send positions? send position to server
+negotiate about rules -> send options to server (later)
+-------------------------------
+client checks whether he's welcome
+if connect to mysql and local host waiting
+
+create new table (name: hostname-timestamp, cols: move varchar(15), when unsigned bigint)
+use tenjiku
+
+CREATE TABLE GAMES
+(
+	opponent VARCHAR(80) , # name of the game table
+	when_started unsigned bigint # timestamp to see which game is the newest
+)
+
+CREATE TABLE 'hostname+date'
+(
+  move VARCHAR(30) CHARACTER SET binary,
+  when unsigned bigint
+);
+
+insert name of new table into table games
+
+send move to db with hostname and timestamp ( now() + 0)
+keep looking whether own move is the last one (according to timestamp)
+if not, read the last move and make it.
+
+create table games(
+player varchar(80), 
+opponent varchar(80), 
+options tinytext, 
+started enum('no', 'yes'), 
+finished enum('no', 'draw', 'sente', 'gote'),
+moves_so_far longtext
+last_move  tinytext
+);
+
+change:
+started will be nil or a timestamp
+
+on connect:
+- look for games w.o. opponent
+- look for unfinished own games
+- start new game

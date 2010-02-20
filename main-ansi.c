@@ -1,3 +1,4 @@
+
 /*
  *	MAIN.C
  *      E.Werner 2000, 2010
@@ -7,7 +8,7 @@
  *	Copyright 1997 Tom Kerrigan
  */
 
-unsigned char tenjiku_version[] = { "0.60" };
+unsigned char tenjiku_version[] = { "0.70" };
 /* #define DEBUG
  */ 
 #include <sys/types.h>
@@ -16,9 +17,24 @@ unsigned char tenjiku_version[] = { "0.60" };
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <time.h>
+
 #include "defs.h"
 #include "data.h"
 #include "protos.h"
+
+#ifdef NETWORKING
+
+#include <mysql/mysql.h>
+#include <mysql/errmsg.h>
+
+MYSQL *conn;
+
+char local_player[128];
+char network_player[128];
+char game_id[20] = "";
+
+#endif
 
 unsigned char *side_name[2] = { "Sente", "Gote" };
 int computer_side, network_side;
@@ -26,15 +42,17 @@ char TeXoutputpath[1024] = "exports";
 char savegamepath[1024] = "savegames";
 char positionpath[1024] = "positions";
 char positionfile[1024];
-
-BOOL tenjiku_server = FALSE;
-BOOL tenjiku_client = FALSE;
-
-int write_port = 8737837; /* tserver on a mobile phone keypad */
-int read_port = 8254367; /* tclient on a mobile phone keypad */
+char global_last_move[64];
 
 FILE *read_pipe = NULL;
 FILE *write_pipe = NULL;
+
+#ifdef NETWORKING
+
+BOOL looking_for_game = FALSE;
+BOOL accepting_game = FALSE;
+
+#endif
 
 BOOL rotated = FALSE; /* board is not rotated */
 BOOL annotate = TRUE;
@@ -106,9 +124,10 @@ long get_ms()
 int main(int argc,  char **argv)
 {
 	char *s = "                                                                                              ";
-	int from, over, to, i;
+	int from, over, to, i, idx;
 	int from_file, to_file;
 	int over_file;
+	char net_move[5]; /* should be sufficient */
        
 	char from_rank, over_rank, to_rank, igui, igui2, prom, *last_move_ptr;
 	char last_move[15], before_last_move[1024], last_move_buf[128]; /* to prevent overflowing from nonsense */
@@ -158,480 +177,17 @@ int main(int argc,  char **argv)
 
 	  found = FALSE;
 	  promote = FALSE;
-		if ((side == computer_side)|| (computer_side == BOTH )) {  /* computer's turn */
+    	  
+	  if ((side == computer_side)|| (computer_side == BOTH )) {  /* computer's turn */
 		  /* have a look at the opening book first */
-		  if ( have_book) {
-		    found_in_book = in_book(before_last_move, last_move_buf);
-		    if ( found_in_book ) {
-		      if ( 9 == sscanf(last_move_buf,"%d%c%c%d%c%c%d%c%c",&from_file, &from_rank, &igui,
-				       &over_file, &over_rank, &igui2, &to_file, &to_rank, &prom) ) {
-			if ( prom == '+' ) promote = TRUE;
-		      }
-		      if ( 8 == sscanf(last_move_buf,"%d%c%c%d%c%c%d%c",&from_file, &from_rank, &igui,
-				       &over_file, &over_rank, &igui2, &to_file, &to_rank) ) {
-			from = 16 - from_file;
-			from += 16 * (from_rank - 'a');
-			over = 16 - over_file;
-			over += 16 * (over_rank - 'a');		  
-			to = 16 - to_file;
-			to += 16 * (to_rank - 'a');
-		      
-			/* loop through the moves to see if it's legal */
-			found = FALSE;
-			for (i = 0; i < gen_end[ply]; ++i) {
-			  if ( promote && ! ( gen_dat[i].m.b.bits & 16 )) 
-			    continue;
-			  if  ( !promote && (gen_dat[i].m.b.bits & 16)) 
-			    continue;
-			  if (gen_dat[i].m.b.bits & 32)
-			    continue;
-			  if ( ! (gen_dat[i].m.b.bits & 4))
-			    continue;
-			  if (gen_dat[i].m.b.from == from && gen_dat[i].m.b.to == to  && gen_dat[i].m.b.over == over) {
-			    found = TRUE;
-			    break;
-			  }
-			} 
-		      } else if ( networked_game && (side == network_side )) {
-			; /* wait for incoming move */
-		      } else  {
-			promote = FALSE;
-			if ( 6 == sscanf(last_move_buf,"%d%c%c%d%c%c",&from_file, &from_rank, &igui,
-					 &to_file, &to_rank, &prom) ) 
-			  if ( prom == '+' ) promote = TRUE;
-			if ( 5 == sscanf(last_move_buf,"%d%c%c%d%c",&from_file, &from_rank, &igui,
-					 &to_file, &to_rank) ) {
-			  from = 16 - from_file;
-			  from += 16 * (from_rank - 'a');
-			  to = 16 - to_file;
-			  to += 16 * (to_rank - 'a');
-			
-			  found = FALSE;
-			  for (i = 0; i < gen_end[ply]; ++i) {
-			    if ( gen_dat[i].m.b.bits & 4) continue;
-			    if ( promote && ! ( gen_dat[i].m.b.bits & 16 )) 
-			      continue;
-			    if  ( !promote && (gen_dat[i].m.b.bits & 16)) 
-			      continue;
-			    if ( igui != '!' && (gen_dat[i].m.b.bits & 32))
-			      continue;
-			    if ( igui == '!' && ! (gen_dat[i].m.b.bits & 32))
-			      continue;
-			    if (gen_dat[i].m.b.from == from && gen_dat[i].m.b.to == to) {
-			      found = TRUE;
-			      break;
-			    }
-			  }
-			}
-		      }
-		      if (!found || !makemove(gen_dat[i].m.b)) {
-			printf("Illegal move %s! Error in book!\n", last_move_buf);
-			fflush(stdout);
-			have_book = FALSE; /* should be already set, but ... */
-		      } else {
-			redos=0; /* new line, so clear old redo stack */
-			print_board(stdout);
-			/* printf("Computer's move: %s\n", last_move_buf);*/
-			printf("Computer's move: %s\n", move_str(gen_dat[i].m.b));
-		      }
-		    } else {
-		      have_book = FALSE; /* should be already set, but ... */
-		      continue;
-		    }/* if (last_move ); */
-		  } else {
-		    /* think about the move and make it */
-
-		    think(FALSE);
-		    if ( !pv[0][0].u ) {
-		      printf("%s loses\n", side_name[side] );
-		      computer_side = EMPTY;
-		      continue;
-		    }
-		    strcpy(last_move,move_str(pv[0][0].b));
-		    makemove(pv[0][0].b);
-		    redos=0;  /* new line, so clear old redo stack */
-		    print_board(stdout);
-		    /* printf("Computer's move: %s\n", last_move);*/
-		    printf("Computer's move: %s\n", move_str(pv[0][0].b));
-		  }
-		  fflush(stdout);
-		  /* save the "backup" data because it will be overwritten */
-		  undo_dat[undos] = hist_dat[0];
-		  ++undos;
-		    
-		  ply = 0;
-		  gen();
-		  continue;
-		}
-		/* get user input */
-		/* printf("%s> ", argv[0]);
-		fflush(stdout);
-		scanf("%s", s);
-		*/
-		s = rl_gets();
-		if (!strcmp(s, "quiesce")) {
-		  if ( search_quiesce ) {
-		    search_quiesce = FALSE;
-		    printf("No quiesce search\n");
-		  } else {
-		    search_quiesce = TRUE;
-		    printf("quiesce search on\n");
-		  }
-			continue;
-		}
-		if (!strcmp(s, "auto")) {
-		  computer_side = BOTH;
-		  continue;
-		}
- 		if (!strcmp(s, "save")|| !strcmp(s,"s")) {
-		  save_game("");
-		  continue;
-		}
- 		if (!strcmp(s, "savepos")|| !strcmp(s,"spos")) {
-		  save_position("");
-		  continue;
-		}
- 		if (!strcmp(s, "loadpos")|| !strcmp(s,"lpos")) {
-		  load_position(NULL);
-		  print_board( stdout );
-		  continue;
-		}
-		if (!strcmp(s, "server")) {
-		  server_init();
-		  continue;
-		}
-		if (!strcmp(s, "connect")) {
-		  client_init();
-		  continue;
-		}
-		if (!strcmp(s,"gettest")) {
-		  test_get();
-		  continue;
-		}
-		if (!strcmp(s,"sendtest")) {
-		  test_send();
-		  continue;
-		}
-		
-		if (!strcmp(s, "load")|| !strcmp(s,"l")) {
-		  load_game("");
-		  continue;
-		}
-		if (!strcmp(s, "loadold")|| !strcmp(s,"l")) {
-		  load_old_game("");
-		  continue;
-		}
-		if (!strcmp(s, "setup")) {
-		  setup_board();
-		  print_board( stdout );
-		  fflush(stdout);
-		  continue;
-		}
-		if (!strcmp(s, "diff")) {
-		  if ( full_captures )
-		    full_captures = FALSE;
-		  else
-		    full_captures = TRUE;
-		  print_board( stdout );
-		  continue;
-		}
-		if (!strcmp(s, "ascii")) {
-		  kanji=FALSE;
-		  fullkanji = FALSE;
-		  print_board( stdout );
-		  continue;
-		}
-		if (!strcmp(s, "kanji")) {
-		  kanji=TRUE;
-		  fullkanji = FALSE;
-		  print_board( stdout );
-		  continue;
-		}
-		if (!strcmp(s, "fullkanji")) {
-		  fullkanji=TRUE;
-		  kanji = FALSE;
-		  print_board( stdout );
-		  continue;
-		}
-		if (!strcmp(s, "rotate") || !strcmp(s,"R")) {
-		  if ( !rotated ) 
-		    rotated = TRUE;
-		  else
-		    rotated = FALSE;
-		  print_board( stdout );
-		  continue;
-		}
-		if (!strcmp(s, "tsa")) {
-		  printf("Jumping Generals jump and jump-capture according to hierarchy (TSA).\n");
-		  jgs_tsa = TRUE;
-		  init();
-		  gen();
-		  continue;
-		}
-		if (!strcmp(s, "ew")) {
-		  printf("Jumping Generals jump-capture anything (Eduard Werner).\n");
-		  fflush(stdout);
-		  have_book = FALSE;
-		  jgs_tsa = FALSE;
-		  init();
-		  gen();
-		  continue;
-		}
-		if (!strcmp(s, "classic")) {
-		  printf("Lion Hawk as two-step area mover (TSA).\n");
-		  fflush(stdout);
-		  modern_lion_hawk = FALSE;
-		  book = book_init();
-		  init();
-		  gen();
-		  continue;
-		}
-		if (!strcmp(s, "modern")) {
-		  printf("Lion Hawk with Lion Power (Colin Paul Adams).\n");
-		  fflush(stdout);
-		  modern_lion_hawk = TRUE;
-		  book = book_init();
-		  init();
-		  gen();
-		  continue;
-		}
-		if (!strcmp(s, "hodges")) {
-		  printf("Fire Demon suicide also burns enemy pieces (George Hodges).\n");
-		  hodges_FiD = TRUE;
-		  book = book_init();
-		  init();
-		  gen();
-		  continue;
-		}
-
-		if (!strcmp(s, "hypo")) {
-		  printf("m(oves) shows hypothetical moves, too\n");
-		  show_hypothetical_moves = TRUE;
-		  continue;
-		}
-		if (!strcmp(s, "nohypo")) {
-		  printf("m(oves) doesn't show hypothetical moves\n");
-		  show_hypothetical_moves = FALSE;
-		  continue;
-		}		
-
-		if (!strcmp(s, "burn")) {
-		  printf("Fire Demon also burns friendly pieces (Eduard Werner).\n");
-		  hodges_FiD = TRUE;
-		  book = book_init();
-		  init();
-		  gen();
-		  continue;
-		}
-		if (!strcmp(s, "noburn")) {
-		  printf("Fire Demon doesn't burn friendly pieces (Eduard Werner).\n");
-		  hodges_FiD = TRUE;
-		  book = book_init();
-		  init();
-		  gen();
-		  continue;
-		}
-		if (!strcmp(s, "tame")) {
-		  printf("Fire Demon only burns if it doesn't capture.\n");
-		  tame_FiD = TRUE;
-		  book = book_init();
-		  init();
-		  gen();
-		  continue;
-		}
-		if (!strcmp(s, "verytame")) {
-		  printf("Fire Demon only burns, but cannot capture.\n");
-		  verytame_FiD = TRUE;
-		  book = book_init();
-		  init();
-		  gen();
-		  continue;
-		}
-		if (!strcmp(s, "notame")) {
-		  printf("Fire Demon burns also on capture.\n");
-		  tame_FiD = FALSE;
-		  verytame_FiD = FALSE;
-		  book = book_init();
-		  init();
-		  gen();
-		  continue;
-		}
-		if (!strcmp(s, "hodges")) {
-		  printf("Fire Demon suicide also burns enemy pieces (George Hodges).\n");
-		  hodges_FiD = TRUE;
-		  book = book_init();
-		  init();
-		  gen();
-		  continue;
-		}
-		if (!strcmp(s, "fid")) {
-		  printf("Fire Demon suicide does not burn anything (TSA).\n");
-		  fflush(stdout);
-		  hodges_FiD = FALSE;
-		  tame_FiD = FALSE;
-		  verytame_FiD = FALSE;
-		  book = book_init();
-		  init();
-		  gen();
-		  continue;
-		}
-		if (!strcmp(s, "on")) {
-			computer_side = side;
-			continue;
-		}
-		if (!strcmp(s, "off")) {
-			computer_side = EMPTY;
-			continue;
-		}
-		if (!strcmp(s, "moves")|| !strcmp(s,"m")) {
-		  show_moves();
-		  continue;
-		}
-		if (!strcmp(s, "inf") || !strcmp(s,"i")) {
-		  show_influence();
-		  continue;
-		}
-		if (!strcmp(s, "check")) {
-		  show_checks();
-		  continue;
-		}
-		if (!strcmp(s, "st")) {
-			scanf("%d", &max_time);
-			max_time *= 1000;
-			max_depth = 100000;
-			continue;
-		}
-		if (!strcmp(s, "sd")) {
-		  scanf("%d", &max_depth);
-#ifdef CENTIPLY
-		  max_depth *= 100;
-#endif
-			max_time = 1000000;
-			continue;
-		}
-		if (!strcmp(s, "goto") || !strcmp(s,"g")) {
-		  goto_position();
-		  print_board(stdout);
-		  continue;
-		}
-		if (!strcmp(s, "TeX") || !strcmp(s,"tex")) {
-		  export_TeX();
-		  continue;
-		}
-		if (!strcmp(s, "undo") || !strcmp(s,"u")) {
-		  if (!undos) {
-		    fprintf(stderr, "No more undos\n");
-				continue;
-		  }
-		  computer_side = EMPTY;
-		  undo_move();
-		  print_board(stdout);
-		  continue;
-		}
-		if (!strcmp(s, "redo") || !strcmp(s,"r")) {
-		  if (!redos) {
-		    fprintf(stderr, "No more redos\n");
-				continue;
-		  }
-		  computer_side = EMPTY;
-		  redo_move();
-		  /* gen(); */
-		  print_board(stdout);
-		  continue;
-		}
-		if (!strcmp(s, "new")) {
-			computer_side = EMPTY;
-			init();
-			strcpy(before_last_move,"");
-			book = book_init();
-			gen();
-			continue;
-		}
-		if (!strcmp(s, "d")) {
-			print_board(stdout);
-			continue;
-		}
-		if (!strcmp(s, "bye") || !strcmp(s, "quit")) {
-			printf("Share and enjoy!\n");
-			exit(0);
-		}
-		if (!strcmp(s, "create")) {
-		  book_create("tenjiku.book.in");
-		  book = book_init();
-			continue;
-		}
-		if (!strcmp(s, "hint")) {
-			think(TRUE);
-			if (!pv[0][0].u)
-				continue;
-			printf("Hint: %s\n", move_str(pv[0][0].b));
-			fflush(stdout);
-			continue;
-		}
-		if (!strcmp(s, "help") || !strcmp(s,"?")) {
-		        printf("------- CURRENT RULES  ----------\n");
-			printf("Fire Demon suicide move burns enemy pieces: %s\n",(hodges_FiD ? "on" : "off"));
-			printf("Fire Demon also burns friendly pieces: %s\n",(burn_all_FiD ? "on" : "off"));
-			printf("Fire Demon only burns when it doesn't capture: %s\n",(tame_FiD ? "on" : "off"));
-			printf("Fire Demon only burns, but cannot capture: %s\n",(verytame_FiD ? "on" : "off"));
-			printf("Modern LHk with Lion power: %s\n",(modern_lion_hawk ? "on" : "off"));
-			printf("Jumping Generals jump-capture anything: %s\n",(jgs_tsa ? "off" : "on"));
-		        printf("------- COMPUTER PLAYER ---------\n");
-			printf("auto - computer plays both sides\n");		  
-			printf("on - computer plays for the side to move\n");
-			printf("off - computer stops playing\n");
-			printf("st n - search for n seconds per move\n");
-			printf("sd n - search n plies deep per move\n");
-			printf("quiesce - toggle quiesce search\n");
-			printf("------- PLAYING THE GAME --------\n");
-			printf("new - starts a new game\n");
-			printf("Enter moves, e.g., 2f-2e, 3e-3f+, 4b!4c, 4bx3c-3d, 7k\n");
-			printf("m(oves) - ask for a square and shows moves of the piece\n");
-			printf("hypo - m(oves) shows hypothetical moves, too\n");
-			printf("nohypo - m(oves) doesn't show hypothetical moves\n");
-			printf("i(nf) - ask for a square and shows pieces that can move there\n");
-			printf("diff - toggle all captures or diff list\n");
-			/* printf("check - shows possible checks\n"); */
-			printf("u(ndo) - takes back a move\n");
-			printf("r(edo) - puts back a move\n");
-			printf("g(oto) - goto position after move nr\n");
-			printf("------- RULES VARIANTS ----------\n");
-			printf("classic - starts a new game with TSA LHk (default)\n");
-			printf("modern - starts a new game with Modern Lion Hawk (C.P.Adams)\n");
-			printf("ew - starts a new game with changed JGns rule (E.Werner)\n");
-			printf("tsa - starts a new game with TSA JGns (default)\n");
-			printf("hodges - starts a new game, FiD suicide burns enemy pieces (G.Hodges)\n");
-			printf("burn - starts a new game, FiD burns also friendly pieces (E.Werner)\n");
-			printf("tame - (notame) starts a new game, FiD only burns when it doesn't capture (E.Werner)\n");
-			printf("verytame - (notame) starts a new game, FiD only burns, but doesn't capture (E.Werner)\n");
-			printf("fid - starts a new game, only FiD suicide only burns own FiD (TSA rule, default)\n");
-			printf("------------ Display ----------------\n");
-			printf("create - create a new opening file - please read the comments in book.dat!\n");
-			printf("d - display the board again\n");
-			printf("rotate/R - rotate the board and display\n");
-			printf("ascii - display ascii board\n");
-			printf("kanji - display kanji board with one kanji per piece\n");
-			printf("fullkanji - display kanji board with two kanjis per piece\n");
-			printf("------------ File I/O ----------------\n");
-			printf("l(oad) - load a game file\n");
-			/* printf("replay - load a game file and replay game\n"); */
-			printf("s(ave) - save the current game to a file\n");
-			printf("lpos - load game position files\n");
-			printf("spos - save position to game position files\n");
-			printf("tex or TeX - export position to LaTeX file\n");
-			printf("bye/quit  - exit the program\n");
-			fflush(stdout);
-			continue;
-		}
-
-		/* maybe the user entered a move? */
-		promote = FALSE;
-
-		if ( 9 == sscanf(s,"%d%c%c%d%c%c%d%c%c",&from_file, &from_rank, &igui,
+	    if ( have_book) {
+	      found_in_book = in_book(before_last_move, last_move_buf);
+	      if ( found_in_book ) {
+		if ( 9 == sscanf(last_move_buf,"%d%c%c%d%c%c%d%c%c",&from_file, &from_rank, &igui,
 				 &over_file, &over_rank, &igui2, &to_file, &to_rank, &prom) ) {
 		  if ( prom == '+' ) promote = TRUE;
 		}
-		if ( 8 == sscanf(s,"%d%c%c%d%c%c%d%c",&from_file, &from_rank, &igui,
+		if ( 8 == sscanf(last_move_buf,"%d%c%c%d%c%c%d%c",&from_file, &from_rank, &igui,
 				 &over_file, &over_rank, &igui2, &to_file, &to_rank) ) {
 		  from = 16 - from_file;
 		  from += 16 * (from_rank - 'a');
@@ -639,7 +195,7 @@ int main(int argc,  char **argv)
 		  over += 16 * (over_rank - 'a');		  
 		  to = 16 - to_file;
 		  to += 16 * (to_rank - 'a');
-
+		  
 		  /* loop through the moves to see if it's legal */
 		  found = FALSE;
 		  for (i = 0; i < gen_end[ply]; ++i) {
@@ -653,19 +209,15 @@ int main(int argc,  char **argv)
 		      continue;
 		    if (gen_dat[i].m.b.from == from && gen_dat[i].m.b.to == to  && gen_dat[i].m.b.over == over) {
 		      found = TRUE;
-#ifdef DEBUG
-		      fprintf(stderr,"move found: %d %d %d: ", from, over, to);
-		      fprintf(stderr,"%d%cx%d%c-%d%c\n", from_file, from_rank, over_file, over_rank, to_file, to_rank);
-#endif
 		      break;
 		    }
 		  } 
-		} else {
+		} else  {
 		  promote = FALSE;
-		  if ( 6 == sscanf(s,"%d%c%c%d%c%c",&from_file, &from_rank, &igui,
+		  if ( 6 == sscanf(last_move_buf,"%d%c%c%d%c%c",&from_file, &from_rank, &igui,
 				   &to_file, &to_rank, &prom) ) 
 		    if ( prom == '+' ) promote = TRUE;
-		  if ( 5 == sscanf(s,"%d%c%c%d%c",&from_file, &from_rank, &igui,
+		  if ( 5 == sscanf(last_move_buf,"%d%c%c%d%c",&from_file, &from_rank, &igui,
 				   &to_file, &to_rank) ) {
 		    from = 16 - from_file;
 		    from += 16 * (from_rank - 'a');
@@ -687,35 +239,510 @@ int main(int argc,  char **argv)
 			found = TRUE;
 			break;
 		      }
-		    } /* for */
-		  } else { /* if 5== sscanf */
-		    promote = FALSE;
-		    if (( 3 == sscanf(s, "%d%c%c", &from_file, &from_rank, &prom ))||
-			( 2 == sscanf(s, "%d%c", &from_file, &from_rank, 0 ))){
-		      /* short notation like 
-			 3d move or capture on 3d
-			 7l+ move piece on or to 7l with promotion
-			 3dx capture something with piece on 3d
-			 would be nice to have sth like HFxRGn as well
-		      */
-		      i = identifymove(from_file, from_rank, prom);
-		      if (i > 0 ) { found = TRUE; }
 		    }
-		  } /* else */
+		  }
 		}
 		if (!found || !makemove(gen_dat[i].m.b)) {
-		  printf("Illegal move.\n");
+		  printf("Illegal move %s! Error in book!\n", last_move_buf);
 		  fflush(stdout);
+		  have_book = FALSE; /* should be already set, but ... */
 		} else {
-		  /* save the "backup" data because it will be overwritten */
-		  strcpy(before_last_move,s);
-		  undo_dat[undos] = hist_dat[0];
-		  ++undos;
-		  redos=0;  /* new line, so clear old redo stack */
+		  redos=0; /* new line, so clear old redo stack */
 		  print_board(stdout);
-		  ply = 0;
-		  gen();
+		  /* printf("Computer's move: %s\n", last_move_buf);*/
+		  printf("Computer's move: %s\n", move_str(gen_dat[i].m.b));
 		}
+	      } else {
+		have_book = FALSE; /* should be already set, but ... */
+		continue;
+	      }/* if (last_move ); */
+	    } else {
+	      /* think about the move and make it */
+	      
+	      think(FALSE);
+	      if ( !pv[0][0].u ) {
+		printf("%s loses\n", side_name[side] );
+		computer_side = EMPTY;
+		continue;
+	      }
+	      strcpy(last_move,move_str(pv[0][0].b));
+	      makemove(pv[0][0].b);
+	      redos=0;  /* new line, so clear old redo stack */
+	      print_board(stdout);
+	      /* printf("Computer's move: %s\n", last_move);*/
+	      printf("Computer's move: %s\n", move_str(pv[0][0].b));
+	    }
+	    fflush(stdout);
+	    /* save the "backup" data because it will be overwritten */
+	    undo_dat[undos] = hist_dat[0];
+	    ++undos;
+	    
+	    ply = 0;
+	    gen();
+	    continue;
+	  } else if ( networked_game && (side == network_side )) {
+		  idx = get_network_move(); /* look for incoming move */
+		  if ( !makemove(gen_dat[idx].m.b)) {
+		    printf("Illegal move.\n");
+		    fflush(stdout);
+		  } else {
+		    undo_dat[undos] = hist_dat[0];
+		    ++undos;
+		    redos=0;  /* new line, so clear old redo stack */
+		    print_board(stdout);
+		    ply = 0;
+		    gen();
+		  }
+	  } else {
+	    s = rl_gets();
+	    if (!strcmp(s, "quiesce")) {
+	      if ( search_quiesce ) {
+		search_quiesce = FALSE;
+		printf("No quiesce search\n");
+	      } else {
+		search_quiesce = TRUE;
+		printf("quiesce search on\n");
+	      }
+	      continue;
+	    }
+	    if (!strcmp(s, "auto")) {
+	      computer_side = BOTH;
+	      continue;
+	    }
+	    if (!strcmp(s, "save")|| !strcmp(s,"s")) {
+	      save_game("");
+	      continue;
+	    }
+	    if (!strcmp(s, "savepos")|| !strcmp(s,"spos")) {
+	      save_position("");
+	      continue;
+		}
+	    if (!strcmp(s, "loadpos")|| !strcmp(s,"lpos")) {
+	      load_position(NULL);
+	      print_board( stdout );
+	      continue;
+	    }
+	    if (!strcmp(s, "accept")) {
+	      connect_db("localhost");
+	      continue;
+	    }
+	    if (!strcmp(s, "connect")) {
+	      connect_db("server");
+	      continue;
+	    }
+	    if (!strcmp(s, "load")|| !strcmp(s,"l")) {
+	      load_game("");
+	      continue;
+	    }
+	    if (!strcmp(s, "loadold")|| !strcmp(s,"l")) {
+	      load_old_game("");
+	      continue;
+	    }
+	    if (!strcmp(s, "setup")) {
+	      setup_board();
+	    print_board( stdout );
+	    fflush(stdout);
+	    continue;
+	    }
+	    if (!strcmp(s, "diff")) {
+	      if ( full_captures )
+		full_captures = FALSE;
+	      else
+		full_captures = TRUE;
+	      print_board( stdout );
+	      continue;
+	    }
+	    if (!strcmp(s, "ascii")) {
+	      kanji=FALSE;
+	      fullkanji = FALSE;
+	      print_board( stdout );
+	      continue;
+	    }
+	    if (!strcmp(s, "kanji")) {
+	      kanji=TRUE;
+	      fullkanji = FALSE;
+	      print_board( stdout );
+	      continue;
+	    }
+	    if (!strcmp(s, "fullkanji")) {
+	      fullkanji=TRUE;
+	      kanji = FALSE;
+	      print_board( stdout );
+	      continue;
+	    }
+	    if (!strcmp(s, "rotate") || !strcmp(s,"R")) {
+	      if ( !rotated ) 
+		rotated = TRUE;
+	      else
+		rotated = FALSE;
+	      print_board( stdout );
+	      continue;
+	    }
+	    if (!strcmp(s, "tsa")) {
+	      printf("Jumping Generals jump and jump-capture according to hierarchy (TSA).\n");
+	      jgs_tsa = TRUE;
+	      init();
+	      gen();
+	      continue;
+	    }
+	    if (!strcmp(s, "ew")) {
+	      printf("Jumping Generals jump-capture anything (Eduard Werner).\n");
+	      fflush(stdout);
+	      have_book = FALSE;
+	      jgs_tsa = FALSE;
+	      init();
+	      gen();
+	      continue;
+	    }
+	    if (!strcmp(s, "classic")) {
+	      printf("Lion Hawk as two-step area mover (TSA).\n");
+	      fflush(stdout);
+	      modern_lion_hawk = FALSE;
+	      book = book_init();
+	      init();
+	      gen();
+	      continue;
+	    }
+	    if (!strcmp(s, "modern")) {
+	      printf("Lion Hawk with Lion Power (Colin Paul Adams).\n");
+	      fflush(stdout);
+	      modern_lion_hawk = TRUE;
+	      book = book_init();
+	      init();
+	      gen();
+	      continue;
+	    }
+	    if (!strcmp(s, "hodges")) {
+	      printf("Fire Demon suicide also burns enemy pieces (George Hodges).\n");
+	      hodges_FiD = TRUE;
+	      book = book_init();
+	      init();
+	      gen();
+	      continue;
+	    }
+	  
+	    if (!strcmp(s, "hypo")) {
+	      printf("m(oves) shows hypothetical moves, too\n");
+	      show_hypothetical_moves = TRUE;
+	      continue;
+	    }
+	    if (!strcmp(s, "nohypo")) {
+	      printf("m(oves) doesn't show hypothetical moves\n");
+	      show_hypothetical_moves = FALSE;
+	      continue;
+	    }		
+	  
+	    if (!strcmp(s, "burn")) {
+	      printf("Fire Demon also burns friendly pieces (Eduard Werner).\n");
+	      hodges_FiD = TRUE;
+	      book = book_init();
+	      init();
+	      gen();
+	      continue;
+	    }
+	    if (!strcmp(s, "noburn")) {
+	      printf("Fire Demon doesn't burn friendly pieces (Eduard Werner).\n");
+	      hodges_FiD = TRUE;
+	      book = book_init();
+	      init();
+	      gen();
+	      continue;
+	    }
+	    if (!strcmp(s, "tame")) {
+	      printf("Fire Demon only burns if it doesn't capture.\n");
+	      tame_FiD = TRUE;
+	      book = book_init();
+	      init();
+	      gen();
+	      continue;
+	    }
+	    if (!strcmp(s, "verytame")) {
+	      printf("Fire Demon only burns, but cannot capture.\n");
+	      verytame_FiD = TRUE;
+	      book = book_init();
+	      init();
+	      gen();
+	      continue;
+	    }
+	    if (!strcmp(s, "notame")) {
+	      printf("Fire Demon burns also on capture.\n");
+	      tame_FiD = FALSE;
+	      verytame_FiD = FALSE;
+	      book = book_init();
+	      init();
+	      gen();
+	      continue;
+	    }
+	    if (!strcmp(s, "hodges")) {
+	      printf("Fire Demon suicide also burns enemy pieces (George Hodges).\n");
+	      hodges_FiD = TRUE;
+	      book = book_init();
+	      init();
+	      gen();
+	      continue;
+	    }
+	    if (!strcmp(s, "fid")) {
+	      printf("Fire Demon suicide does not burn anything (TSA).\n");
+	      fflush(stdout);
+	      hodges_FiD = FALSE;
+	      tame_FiD = FALSE;
+	      verytame_FiD = FALSE;
+	      book = book_init();
+	      init();
+	      gen();
+	      continue;
+	    }
+	    if (!strcmp(s, "on")) {
+	      computer_side = side;
+	      continue;
+	    }
+	    if (!strcmp(s, "off")) {
+	      computer_side = EMPTY;
+	      continue;
+	    }
+	    if (!strcmp(s, "moves")|| !strcmp(s,"m")) {
+	      show_moves();
+	      continue;
+	    }
+	    if (!strcmp(s, "inf") || !strcmp(s,"i")) {
+	      show_influence();
+	      continue;
+	    }
+	    if (!strcmp(s, "check")) {
+	      show_checks();
+	      continue;
+	    }
+	    if (!strcmp(s, "st")) {
+	      scanf("%d", &max_time);
+	      max_time *= 1000;
+	      max_depth = 100000;
+	      continue;
+	    }
+	    if (!strcmp(s, "sd")) {
+	      scanf("%d", &max_depth);
+#ifdef CENTIPLY
+	      max_depth *= 100;
+#endif
+	      max_time = 1000000;
+	      continue;
+	    }
+	    if (!strcmp(s, "goto") || !strcmp(s,"g")) {
+	      goto_position();
+	      print_board(stdout);
+	      continue;
+	    }
+	    if (!strcmp(s, "TeX") || !strcmp(s,"tex")) {
+	      export_TeX();
+	      continue;
+	    }
+	    if (!strcmp(s, "undo") || !strcmp(s,"u")) {
+	      if (!undos) {
+		fprintf(stderr, "No more undos\n");
+		continue;
+	      }
+	      computer_side = EMPTY;
+	      undo_move();
+	      print_board(stdout);
+	      continue;
+	    }
+	    if (!strcmp(s, "redo") || !strcmp(s,"r")) {
+	      if (!redos) {
+		fprintf(stderr, "No more redos\n");
+		continue;
+	      }
+	      computer_side = EMPTY;
+	      redo_move();
+	      /* gen(); */
+	      print_board(stdout);
+	      continue;
+	    }
+	    if (!strcmp(s, "new")) {
+	      computer_side = EMPTY;
+	      init();
+	      strcpy(before_last_move,"");
+	      book = book_init();
+	      gen();
+	      continue;
+	    }
+	    if (!strcmp(s, "d")) {
+	      print_board(stdout);
+	      continue;
+	    }
+	    if (!strcmp(s, "bye") || !strcmp(s, "quit")) {
+	      printf("Share and enjoy!\n");
+	      if ( conn ) { /* are we connected */
+		printf("Closing connection to database ...\n");
+		mysql_close(conn);
+	      }
+	      exit(0);
+	    }
+	    if (!strcmp(s, "create")) {
+	      book_create("tenjiku.book.in");
+	      book = book_init();
+	      continue;
+	    }
+	    if (!strcmp(s, "hint")) {
+	      think(TRUE);
+	      if (!pv[0][0].u)
+		continue;
+	      printf("Hint: %s\n", move_str(pv[0][0].b));
+	      fflush(stdout);
+	      continue;
+	    }
+	    if (!strcmp(s, "help") || !strcmp(s,"?")) {
+	      printf("------- CURRENT RULES  ----------\n");
+	      printf("Fire Demon suicide move burns enemy pieces: %s\n",(hodges_FiD ? "on" : "off"));
+	      printf("Fire Demon also burns friendly pieces: %s\n",(burn_all_FiD ? "on" : "off"));
+	      printf("Fire Demon only burns when it doesn't capture: %s\n",(tame_FiD ? "on" : "off"));
+	      printf("Fire Demon only burns, but cannot capture: %s\n",(verytame_FiD ? "on" : "off"));
+	      printf("Modern LHk with Lion power: %s\n",(modern_lion_hawk ? "on" : "off"));
+	      printf("Jumping Generals jump-capture anything: %s\n",(jgs_tsa ? "off" : "on"));
+	      printf("------- COMPUTER PLAYER ---------\n");
+	      printf("auto - computer plays both sides\n");		  
+	      printf("on - computer plays for the side to move\n");
+	      printf("off - computer stops playing\n");
+	      printf("st n - search for n seconds per move\n");
+	      printf("sd n - search n plies deep per move\n");
+	      printf("quiesce - toggle quiesce search\n");
+	      printf("------- PLAYING THE GAME --------\n");
+	      printf("new - starts a new game\n");
+	      printf("Enter moves, e.g., 2f-2e, 3e-3f+, 4b!4c, 4bx3c-3d, 7k\n");
+	      printf("m(oves) - ask for a square and shows moves of the piece\n");
+	      printf("hypo - m(oves) shows hypothetical moves, too\n");
+	      printf("nohypo - m(oves) doesn't show hypothetical moves\n");
+	      printf("i(nf) - ask for a square and shows pieces that can move there\n");
+	      printf("diff - toggle all captures or diff list\n");
+	      /* printf("check - shows possible checks\n"); */
+	      printf("u(ndo) - takes back a move\n");
+	      printf("r(edo) - puts back a move\n");
+	      printf("g(oto) - goto position after move nr\n");
+	      printf("------- RULES VARIANTS ----------\n");
+	      printf("classic - starts a new game with TSA LHk (default)\n");
+	      printf("modern - starts a new game with Modern Lion Hawk (C.P.Adams)\n");
+	      printf("ew - starts a new game with changed JGns rule (E.Werner)\n");
+	      printf("tsa - starts a new game with TSA JGns (default)\n");
+	      printf("hodges - starts a new game, FiD suicide burns enemy pieces (G.Hodges)\n");
+	      printf("burn - starts a new game, FiD burns also friendly pieces (E.Werner)\n");
+	      printf("tame - (notame) starts a new game, FiD only burns when it doesn't capture (E.Werner)\n");
+	      printf("verytame - (notame) starts a new game, FiD only burns, but doesn't capture (E.Werner)\n");
+	      printf("fid - starts a new game, only FiD suicide only burns own FiD (TSA rule, default)\n");
+	      printf("------------ Display ----------------\n");
+	      printf("create - create a new opening file - please read the comments in book.dat!\n");
+	      printf("d - display the board again\n");
+	      printf("rotate/R - rotate the board and display\n");
+	      printf("ascii - display ascii board\n");
+	      printf("kanji - display kanji board with one kanji per piece\n");
+	      printf("fullkanji - display kanji board with two kanjis per piece\n");
+	      printf("------------ File I/O ----------------\n");
+	      printf("l(oad) - load a game file\n");
+	      /* printf("replay - load a game file and replay game\n"); */
+	      printf("s(ave) - save the current game to a file\n");
+	      printf("lpos - load game position files\n");
+	      printf("spos - save position to game position files\n");
+	      printf("tex or TeX - export position to LaTeX file\n");
+	      printf("bye/quit  - exit the program\n");
+	      fflush(stdout);
+	      continue;
+	    }
+
+	    /* maybe the user entered a move? */
+	    promote = FALSE;
+
+	    if ( 9 == sscanf(s,"%d%c%c%d%c%c%d%c%c",&from_file, &from_rank, &igui,
+			     &over_file, &over_rank, &igui2, &to_file, &to_rank, &prom) ) {
+	      if ( prom == '+' ) promote = TRUE;
+	    }
+	    if ( 8 == sscanf(s,"%d%c%c%d%c%c%d%c",&from_file, &from_rank, &igui,
+			     &over_file, &over_rank, &igui2, &to_file, &to_rank) ) {
+	      from = 16 - from_file;
+	      from += 16 * (from_rank - 'a');
+	      over = 16 - over_file;
+	      over += 16 * (over_rank - 'a');		  
+	      to = 16 - to_file;
+	      to += 16 * (to_rank - 'a');
+
+	      /* loop through the moves to see if it's legal */
+	      found = FALSE;
+	      for (i = 0; i < gen_end[ply]; ++i) {
+		if ( promote && ! ( gen_dat[i].m.b.bits & 16 )) 
+		  continue;
+		if  ( !promote && (gen_dat[i].m.b.bits & 16)) 
+		  continue;
+		if (gen_dat[i].m.b.bits & 32)
+		  continue;
+		if ( ! (gen_dat[i].m.b.bits & 4))
+		  continue;
+		if (gen_dat[i].m.b.from == from && gen_dat[i].m.b.to == to  && gen_dat[i].m.b.over == over) {
+		  found = TRUE;
+#ifdef DEBUG
+		  fprintf(stderr,"move found: %d %d %d: ", from, over, to);
+		  fprintf(stderr,"%d%cx%d%c-%d%c\n", from_file, from_rank, over_file, over_rank, to_file, to_rank);
+#endif
+		  break;
+		}
+	      } 
+	    } else {
+	      promote = FALSE;
+	      if ( 6 == sscanf(s,"%d%c%c%d%c%c",&from_file, &from_rank, &igui,
+			       &to_file, &to_rank, &prom) ) 
+		if ( prom == '+' ) promote = TRUE;
+	      if ( 5 == sscanf(s,"%d%c%c%d%c",&from_file, &from_rank, &igui,
+			       &to_file, &to_rank) ) {
+		from = 16 - from_file;
+		from += 16 * (from_rank - 'a');
+		to = 16 - to_file;
+		to += 16 * (to_rank - 'a');
+		    
+		found = FALSE;
+		for (i = 0; i < gen_end[ply]; ++i) {
+		  if ( gen_dat[i].m.b.bits & 4) continue;
+		  if ( promote && ! ( gen_dat[i].m.b.bits & 16 )) 
+		    continue;
+		  if  ( !promote && (gen_dat[i].m.b.bits & 16)) 
+		    continue;
+		  if ( igui != '!' && (gen_dat[i].m.b.bits & 32))
+		    continue;
+		  if ( igui == '!' && ! (gen_dat[i].m.b.bits & 32))
+		    continue;
+		  if (gen_dat[i].m.b.from == from && gen_dat[i].m.b.to == to) {
+		    found = TRUE;
+		    break;
+		  }
+		} /* for */
+	      } else { /* if 5== sscanf */
+		promote = FALSE;
+		if (( 3 == sscanf(s, "%d%c%c", &from_file, &from_rank, &prom ))||
+		    ( 2 == sscanf(s, "%d%c", &from_file, &from_rank, 0 ))){
+		  /* short notation like 
+		     3d move or capture on 3d
+		     7l+ move piece on or to 7l with promotion
+		     3dx capture something with piece on 3d
+		     would be nice to have sth like HFxRGn as well
+		  */
+		  i = identifymove(from_file, from_rank, prom);
+		  if (i > 0 ) { found = TRUE; }
+		}
+	      } /* else */
+	    }
+	    if (!found || !makemove(gen_dat[i].m.b)) {
+	      printf("Illegal move.\n");
+	      fflush(stdout);
+	    } else {
+	      /* save the "backup" data because it will be overwritten */
+	      if ( networked_game ) { 
+		printf("sending move idx (2): %d", i);
+		sprintf(net_move,"%d",i);
+		send_network_move(net_move);
+	      }
+	      strcpy(before_last_move,s);
+	      undo_dat[undos] = hist_dat[0];
+	      ++undos;
+	      redos=0;  /* new line, so clear old redo stack */
+	      print_board(stdout);
+	      ply = 0;
+	      gen();
+	    }
+	  }
 	}
 }
 
@@ -942,6 +969,10 @@ unsigned char *half_move_str(move_bytes m)
 {
   static unsigned char str[15];
   char igui, igui2 = '-';
+  char burn_self = '*';
+
+  if (!(m.bits & 2 ) )
+    burn_self = ' ';
   if (m.bits & 32) /* igui move */
     igui = '!';
   else 
@@ -949,7 +980,7 @@ unsigned char *half_move_str(move_bytes m)
     else igui = '-';
   if (m.bits & 4) {
     if (m.bits & 16)  /* promotion */
-      sprintf(str, "%d%c%c%d%c%c%d%c+",
+      sprintf(str, "%d%c%c%d%c%c%d%c+%c",
 	      16 - GetFile(m.from),
 	      GetRank(m.from) + 'a',
 	      igui,
@@ -957,9 +988,9 @@ unsigned char *half_move_str(move_bytes m)
 	      GetRank(m.over) + 'a',
 	      igui2,
 	      16 - GetFile(m.to),
-	      GetRank(m.to) + 'a');
+	      GetRank(m.to) + 'a', burn_self);
     else  
-      sprintf(str, "%d%c%c%d%c%c%d%c",
+      sprintf(str, "%d%c%c%d%c%c%d%c%c",
 	      16 - GetFile(m.from),
 	      GetRank(m.from) + 'a',
 	      igui,
@@ -967,23 +998,32 @@ unsigned char *half_move_str(move_bytes m)
 	      GetRank(m.over) + 'a',
 	      igui2,
 	      16 - GetFile(m.to),
-	      GetRank(m.to) + 'a');
-  } else {
-    if (m.bits & 16)  /* promotion */
-      sprintf(str, "%d%c%c%d%c+",
+	      GetRank(m.to) + 'a', burn_self);
+  } else { /* FiD will go here */
+    if (m.bits & 16)  /* promotion, cannot be a FiD */
+      sprintf(str, "%d%c%c%d%c+%c",
 	      16 - GetFile(m.from),
 	      GetRank(m.from) + 'a',
 	      igui,
 	      16 - GetFile(m.to),
-	      GetRank(m.to) + 'a');
-    else
-    sprintf(str, "%d%c%c%d%c",
-	    16 - GetFile(m.from),
-	    GetRank(m.from) + 'a',
-	    igui,
-	    16 - GetFile(m.to),
-	    GetRank(m.to) + 'a');
-
+	      GetRank(m.to) + 'a', burn_self);
+    else {
+      if ( m.burned_pieces == '0' ) {
+	sprintf(str, "%d%c%c%d%c%c",
+		16 - GetFile(m.from),
+		GetRank(m.from) + 'a',
+		igui,
+		16 - GetFile(m.to),
+		GetRank(m.to) + 'a',burn_self);
+      } else {
+	sprintf(str, "%d%c%c%d%c!%c",
+		16 - GetFile(m.from),
+		GetRank(m.from) + 'a',
+		igui,
+		16 - GetFile(m.to),
+		GetRank(m.to) + 'a',m.burned_pieces);
+      }
+    }
   }
   return str;
 }
@@ -1241,8 +1281,12 @@ void ascii_print_board( FILE *fd )
   fprintf( fd,"║ p\n  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n   16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1\n\n");
   }
   if ( undos ) { 
-    fprintf( fd, "%s to move (last move: %d. %s)\n",
-	     side_name[side], undos, move_str(undo_dat[undos-1].m.b));
+    if ( networked_game )
+      fprintf( fd, "%s to move (last move: %d. %s)\n", 
+	       side_name[side], undos, move_str(undo_dat[undos-1].m.b));
+    else
+      fprintf( fd, "%s to move (last move: %d. %s)\n",
+	       side_name[side], undos, move_str(undo_dat[undos-1].m.b));
 
   } else {
     fprintf( fd,"%s to move\n", 
@@ -1730,6 +1774,7 @@ void really_load_game( char *fn ) {
   int from, over, to, i, move_nr;
   int from_file, to_file;
   int over_file;
+  int burned;
   int line = 0;
   char from_rank, over_rank, to_rank, igui, igui2, prom;
   BOOL promote, found;
@@ -1848,11 +1893,16 @@ void really_load_game( char *fn ) {
       continue;
     }
     promote = FALSE;
-    if ( 10 == sscanf(s,"%d.%s%d%c%c%d%c%c%d%c",&move_nr, piece, &from_file, &from_rank, &igui,
-		     &over_file, &over_rank, &igui2, &to_file, &to_rank) ) {
-      if ( 11 == sscanf(s,"%d.%s%d%c%c%d%c%c%d%c%c", &move_nr, piece, &from_file, &from_rank, &igui,
-		     &over_file, &over_rank, &igui2, &to_file, &to_rank, &prom) ) {
-		  if ( prom == '+' ) promote = TRUE;
+    if ((( 10 == sscanf(s,"%d.%s%d%c%c%d%c%c%d%c",&move_nr, piece, &from_file, &from_rank, &igui,
+			&over_file, &over_rank, &igui2, &to_file, &to_rank))&& (igui2 != '!'))||
+	(( 10 == sscanf(s,"%d.%s%d%c%c%d%c%c%d%c*",&move_nr, piece, &from_file, &from_rank, 
+			 &igui, &over_file, &over_rank, &igui2, &to_file, &to_rank)) &&
+	 (igui2 != '!'))) {
+
+      if ( 11 == sscanf(s,"%d.%s%d%c%c%d%c%c%d%c+", &move_nr, 
+			piece, &from_file, &from_rank, &igui,
+			&over_file, &over_rank, &igui2, &to_file, &to_rank) ) {
+	promote = TRUE;
       }
       /* add the move to the history */
       sprintf(hist_s,"%d%c%c%d%c%c%d%c",from_file, from_rank,igui,
@@ -1882,8 +1932,12 @@ void really_load_game( char *fn ) {
 	  break;
 	}
       } 
-    } else if ( 7 == sscanf(s,"%d.%s%d%c%c%d%c",&move_nr, piece, &from_file, &from_rank, &igui,
-			    &to_file, &to_rank) ) {
+    } else if (( 7 == sscanf(s,"%d.%s%d%c%c%d%c",&move_nr, piece, &from_file, &from_rank, &igui,
+			     &to_file, &to_rank)) ||
+		 ( 8 == sscanf(s,"%d.%s%d%c%c%d%c!%d",&move_nr, piece, &from_file, 
+			       &from_rank, &igui, &to_file, &to_rank, &burned)) || 
+		 ( 7 == sscanf(s,"%d.%s%d%c%c%d%c*",&move_nr, piece, &from_file, 
+			       &from_rank, &igui,  &to_file, &to_rank))) {
       if ( 8 == sscanf(s,"%d.%s%d%c%c%d%c%c",&move_nr, piece, &from_file, &from_rank, &igui,
 		       &to_file, &to_rank, &prom) ) {
 	if ( prom == '+' ) promote = TRUE;
@@ -3175,6 +3229,9 @@ void undo_move( void ) {
   ply = 1;
   takeback();
   gen();
+  if (networked_game) {
+    send_network_move("undo");
+  }
 }
 
 void redo_move( void ) {
@@ -3188,6 +3245,9 @@ void redo_move( void ) {
   ply = 0;
   /* gen(); */
   makemove(hist_dat[0].m.b);
+  if (networked_game) {
+    send_network_move("redo");
+  }
 }
 
 void process_arguments(int argc, char **argv) {
@@ -3338,90 +3398,417 @@ void save_position( void ) {
   fclose( outcolor );
 }
 
+BOOL connect_db( char *server_name ) {
+#ifndef NETWORKING
+  fprintf(stderr,"Sorry, I was compiled w.o. networking support.\n");
+  fprintf(stderr,"Install a mysql client with development files and recompile.\n");
+  return( FALSE );
+#else
+  char real_server[128];
+  char query[1024];
+  char whoami[24];
+  char start_new;
+  MYSQL_RES *res;
+  MYSQL_ROW *row;
 
-void server_init( void ) {
-  char command[32];
+  printf("What is your name? ");
+  scanf("%s",whoami);
 
-  if (tenjiku_client) {
-    fprintf(stderr,"I am already acting as a client\n");
-    return;
-  }
-  if (tenjiku_server) {
-    fprintf(stderr,"Server already started\n");
-    return;
-  }
+  printf("MySQL client version: %s, connecting ...\n", mysql_get_client_info());
 
-  sprintf(command,"netcat -l -p %u", read_port);
-  /* now open two global pipes for reading and writing through netcat */
-  if ( ! (read_pipe = popen(command, "r")) ) {
-    fprintf(stderr,"cannot establish pipe on port %u\n", read_port);
-    return;
+  conn = mysql_init(NULL);
+  
+  if (conn == NULL) {
+    printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
+    return( FALSE );
   }
 
-  sprintf(command,"netcat -l -p %u", write_port);
-  if ( ! (write_pipe = popen(command, "w")) ) {
-    fprintf(stderr,"cannot establish pipe on port %u\n", write_port);
-    return;
+  if ( !strcmp(server_name, "localhost") ) { /* connect to local server */
+    if (mysql_real_connect(conn, "localhost", "tenjiku", "tenjiku", "tenjiku", 0, NULL, 0) == NULL) {
+      printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
+      return( FALSE );
+    }
+    printf("Connected to mysql server on localhost.\n");
+  } else { /* connect to other computer */
+    scanf("Enter server to connect to: %s", real_server);
+    if (mysql_real_connect(conn, real_server, "tenjiku", "tenjiku", "tenjiku", 0, NULL, 0) == NULL) {
+      printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
+      return(FALSE);
+    }
+    printf("Connected to mysql server on %s.\n", real_server);
   }
-  fprintf(stderr, "Pipes established, waiting for client\n");
-  tenjiku_server = TRUE;
-  networked_game = TRUE;
+  /* do I have unfinished games? */
+  /* select from games player, opponent, options, 
+     started = yes, finished = no */
+  sprintf(query, "select all game_id, player, opponent, options, moves_so_far from games where (player='%s' or opponent = '%s')  and started != '0' and finished = 'no'", whoami, whoami);
+  printf("%s\n", query); 
+  if ( mysql_query(conn, query) ) {
+    printf("An error has occurred. (1)\n");
+    return( FALSE );
+  }
+  res = mysql_use_result( conn );
+  while ( row = mysql_fetch_row( res ) ) {
+    printf("Unfinished game: %s - %s: (a)bort, (c)ontinue, (s)kip?\n", 
+	   (char *)row[1], (char *)row[2]);
+    while (( start_new = getchar() ) != EOF )
+      if ((start_new == 'a')||(start_new == 'c')||(start_new == 's'))
+	break;    
+    switch (start_new) {
+    case 'a':
+      abort_game( row );
+      break;
+    case 's':
+      printf("skipping game\n");
+      break;
+    case 'c':
+      load_game_from_db( row );
+    }
+  }
+  /* are there games w.o. opponent? */
+  /* select from games where player = nil or opponent = nil */
+  
+  if ( mysql_query( conn, "select all game_id, player, opponent, options, moves_so_far from games where player = 'nil' or opponent = 'nil'")) {
+    printf("An error has occurred. (2)\n");
+    return( FALSE );
+  }
+  res = mysql_use_result(conn);
+  while ( row = mysql_fetch_row( res ) ) {
+    if ( ! strcmp( (char *)row[1], "nil" ) &&  (strcmp( (char *)row[2], whoami ) != 0)) {
+      printf("%s as gote is looking for an opponent. Join game? (y/n)\n", 
+	     (char *)row[2] );
+      while (( start_new = getchar() ) != EOF )
+	if ((start_new == 'y')||(start_new == 'n'))
+	  break;
+      if ( start_new == 'y') {
+	join_game( res, row, whoami, 1 );
+	return;
+      }
+    } else if ( ! strcmp( (char *)row[2], "nil" )  &&  (strcmp( (char *)row[1], whoami ) != 0)) {
+      printf("%s as sente is looking for an opponent. Join game? (y/n)\n", 
+	     (char *)row[1] );
+      while (( start_new = getchar() ) != EOF )
+	if ((start_new == 'y')||(start_new == 'n'))
+	  break;
+      if ( start_new == 'y' ) {
+	join_game( res, row, whoami, 0 );
+	return;
+      }
+    }
+  }
+  /* do I want to start a new game? */
+  /* insert into games player opponent = nil, options = current_options,
+     started = no, finished = no, moves_so_far='' */
+    printf("Do you want to start a new game? (y/n)");
+
+    while (( start_new = getchar() ) != EOF )
+      if ((start_new == 'y')||(start_new == 'n'))
+	break;
+
+    if ( start_new == 'y') {
+      new_db_game( whoami );
+      mysql_free_result( res );
+    } else {
+      printf("OK, closing connection to server then\n");
+      if ( conn )
+	mysql_close( conn );
+      else
+	printf("Hmmm, the connection is already down ...\n");
+    }
+  return( TRUE );
+#endif
 }
 
-void client_init( void ) {
-  char server_name[64];
-  char command[128];
-  if (tenjiku_server) {
-    fprintf(stderr,"I am already acting as a server\n");
+void check_db( void ) {
+#ifdef NETWORKING
+  if ( ! conn && (looking_for_game || accepting_game)) {
+    fprintf(stderr,"Something's wrong - a networked game but no connection!\n");
+  }
+  ;
+#else
+  ;
+#endif
+}
+
+void send_network_move( char *thismove ) {
+#ifdef NETWORKING
+  char msql_stat[128];
+ 
+  mysql_close( conn );
+
+  conn = mysql_init(NULL);
+  
+  if (conn == NULL) {
+    printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
     return;
   }
-  if (tenjiku_client) {
-    fprintf(stderr,"Client already started\n");
+
+  if (mysql_real_connect(conn, "localhost", "tenjiku", "tenjiku", "tenjiku", 0, NULL, 0) == NULL) {
+    printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
     return;
   }
 
-  /* now open two global pipes for reading and writing through netcat */
-  fprintf(stdout, "Enter server name: ");
-  fscanf(stdin,"%s", server_name);
+ if ( mysql_query( conn, "commit" )) 
+    printf("send_network_move: Hmmm, something's wrong with the connection: %s\n", mysql_error( conn )); 
+  if (! strcmp(thismove, "")) return;
+  sprintf(msql_stat,"update games set last_move = '%s' where game_id = '%s'", thismove, game_id);
+  printf("%s\n", msql_stat);
+  if ( mysql_query( conn, msql_stat )) 
+    printf("send_network_move: Hmmm, something's wrong with the connection: %s\n", mysql_error( conn ));
+  strcpy(global_last_move, thismove);
+#else
+  ;
+#endif
+}
 
-  sprintf(command, "netcat %s %u", server_name, read_port);
+int get_network_move( void ){ 
+  /* keep checking the database until a new move appears in last_move, make it */
+  /* this should also check whether the other player has gone away */
+  /* and save the position in a local file if the connection is gone */
+  int move_idx;
+  while ( 1) {
+    move_idx = check_network_move(); 
+    if (  move_idx != -1 )
+      return(move_idx);
+    sleep( 1);
+  }
+}
+  
+int check_network_move( void ) {
+ 
+  char msql_stat[128], msql_stat2[128];
+  char last_move[64];
+  MYSQL_RES *res;
+  MYSQL_ROW *row;
+  int move_idx;
 
-  if ( ! (read_pipe = popen(command, "w") )) {
-    fprintf(stderr,"cannot connect to %s on port %u\n", server_name, read_port);
-    return;
+  mysql_close( conn );
+
+  conn = mysql_init(NULL);
+  
+  if (conn == NULL) {
+    printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
+    return(-1);
   }
 
-  sprintf(command, "netcat %s %u", server_name, write_port);
+  if (mysql_real_connect(conn, "localhost", "tenjiku", "tenjiku", "tenjiku", 0, NULL, 0) == NULL) {
+    printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
+    return(-1);
+  }
 
-  if ( ! (write_pipe = popen( command, "r")) ) {
-    fprintf(stderr,"cannot connect to %s on port %u\n", server_name, write_port);
+
+  /*  printf("checking ... "); */
+  sprintf(msql_stat, "select all last_move from games where game_id = '%s'", game_id);
+  sprintf(msql_stat2, "update games set last_move='' where game_id = '%s'", game_id);
+  
+  /* has something changed? */
+  if ( mysql_query( conn, msql_stat )) {
+    printf("%s\n", msql_stat); 
+    printf("check_network_move: Hmmm, something's wrong with the connection: %s\n", mysql_error( conn ));
+    return(-1);
+  } else {
+    /* check for non-nil opponent */
+    res = mysql_use_result(conn);
+    row = mysql_fetch_row( res );
+      if ( strcmp((char*)row[0],"") &&
+	   strcmp((char*)row[0],global_last_move)) { /* a move or command has arrived */
+	strcpy(last_move,(char*)row[0]);
+	move_idx = row[0];
+	printf("Got a move: %s\n", last_move);
+	mysql_free_result( res );
+	if ( mysql_query( conn, msql_stat2 )) {
+	  printf("check_network_move(2): Hmmm, something's wrong with the connection: %s\n", mysql_error( conn ));
+	  return(-1);
+	}
+	return( move_idx );
+      }
+  }
+}
+
+#ifdef NETWORKING
+
+void abort_game(  MYSQL_ROW *row ) {
+  /* marks the game in row as finished */
+
+  char ask;
+  printf("This will mark the current game as finished. Proceed? (y/n) ");
+    while (( ask = getchar() ) != EOF )
+      if (( ask == 'y')||( ask == 'n'))
+	break;
+      else
+	  printf("Please answer y or n:");
+    if ( ask == 'n') {
+      printf("NOT marking game as finished.\n");
+      return;
+    } else if ( ask == 'y') {
+      fflush(stdin);
+      printf("How did the game end? (s)ente won, (g)ote won, (d)raw:");
+      while (( ask = getchar() ) != EOF )
+	if (( ask == 's')||( ask == 'g')||(ask == 'd'))
+	  break;
+	else
+	  printf("Please answer s, g, or d:");
+      /* insert into the row */
+  /* insert will not work because the result isn't freed */      
+    }
+}
+
+void load_game_from_db( MYSQL_ROW *row) {
+  
+  printf("Loading game from db ...");
+  /* get the moves in row[3] and options in row[2] and make them */
+  /* get last_move as well, that's the one we'll be looking for */
+  printf("done!\n");
+}
+
+void join_game( MYSQL_RES *res, MYSQL_ROW *row, char *whoami, int which ) {
+  /* which is 0 for sente, 1 for gote */
+  char query1[128], query2[128];
+  char nplayer[128];
+  int err;  
+
+
+  sprintf(query1, "delete from games where player='%s' and opponent='%s' and options='%s' and started = '0'", (char *)row[1], (char *)row[2], (char *)row[3]);
+  if ( which ) { /* options aren't used yet */
+    sprintf(query2,"insert into games values ('%s', '%s', '%s', '', now()+0, 'no', '', '')", (char *)row[0],
+	   whoami, (char *)row[2] );
+    strcpy(nplayer,(char *)row[2]);
+    network_side = xside;
+    
+  } else {
+    sprintf(query2,"insert into games values ('%s', '%s', '%s', '', now()+0, 'no', '', '')", (char *)row[0],
+	   (char *)row[1], whoami );
+    strcpy(nplayer,(char *)row[1]);
+    network_side = side;
+    rotated = TRUE;
+  }
+
+  printf("%s\n",query2);
+
+  strcpy(game_id, (char *)row[0]);
+
+  mysql_free_result( res );
+
+
+  if ( mysql_query( conn, "start transaction")) {
+    printf("Couldn't start transaction: %s\n", mysql_error( conn ));
     return;
+  };
+ 
+
+  if ( mysql_query( conn, query2 )) {
+    printf("Couldn't join game: %s\n", mysql_error( conn ));
+    return;
+  };
+
+  printf("%s\n",query1);
+
+  if ( mysql_query( conn, query1 )) {
+    printf("Couldn't delete game request: %s\n", mysql_error( conn ));
   }
   
-  tenjiku_client = TRUE;
+  if ( mysql_query( conn, "commit")) {
+    printf("Couldn't commit: %s\n", mysql_error( conn ));
+    return;
+  };
+
   networked_game = TRUE;
+  strcpy(local_player, whoami);
+  strcpy(network_player, nplayer);
+  printf("Game joined.\n");
+  print_board( stdout );
 }
 
+void new_db_game( char *whoami ) {
 
-void send_to_peer( char *string ) {
-  if ( ! write_pipe )
+  char ask;
+  char msql_stat[128];
+  struct tm *tmp;
+  time_t t;
+  int i;
+
+  MYSQL_RES *res;
+  MYSQL_ROW *row;
+  /* check whether I haven't got a game running or started */
+
+  if ( strcmp(game_id,"") ) {
+    printf("You have already started or requested a game! (id %s)\n", game_id);
     return;
-  fprintf(write_pipe, "%s\n", string);
-  fflush(write_pipe);
+  }
+
+ /* generate unique id for the game */
+  tmp = localtime(&t);
+  sprintf(game_id,"%02d%02d%02d%02d%02d%02d", 
+     tmp->tm_mday, tmp->tm_mon+1, tmp->tm_year+1900,
+	  tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
+ 
+
+  printf("OK starting new game. ");
+  printf("Do you want to play Sente (Black) or Gote (White)? (s/g)");
+
   
-}
+  while (( ask = getchar() ) != EOF )
+    if (( ask == 's')||( ask == 'g'))
+      break;
 
-char *get_from_peer() {
-  char s[128];
-  if (! read_pipe )
+  if ( ask == 's') {
+    network_side = xside;
+    sprintf(msql_stat, "insert into games values ('%s', '%s', 'nil', '', '0', 'no', '', '')", game_id, whoami);
+  } else {
+    network_side = side;
+    sprintf(msql_stat, "insert into games values ('%s', 'nil', '%s', '', '0', 'no', '', '')", game_id, whoami);
+  }
+
+  /* now insert values into table */
+  printf("%s\n", msql_stat);
+  if ( mysql_query( conn, msql_stat )) {
+    printf("Couldn't add new game to database. Sorry.\n");
     return;
-  return (fgets(s, 128,read_pipe));
-}
+  }
 
-int test_send( void ) {
-  send_to_peer("7l-7k");
-}
+  printf("Game added. Let's wait for our opponent.\n");
+  networked_game = TRUE;
+  strcpy(local_player, whoami );
 
-int test_get( void ) {
-  printf("%s\n", get_from_peer());
-}
+  sprintf(msql_stat, "select all game_id, player, opponent from games where game_id = '%s'", game_id);
+
+  i= 0;
+  while ( i++ < MAXWAIT ) {
+    sleep( 1);
+    /* has something changed? */
+    if ( mysql_query( conn, msql_stat ))  {
+      printf("Hmmm, something's wrong with the connection: %s\n", mysql_error( conn ));
+    
+    } else {
+      /* check for non-nil opponent */
+      res = mysql_use_result(conn);
+      row = mysql_fetch_row( res );
+      if ( strcmp("nil", (char *)row[1]) && strcmp("nil", (char *)row[2])) {
+	/* somebody has joined */
+	if ( !strcmp(whoami,(char *)row[1]) ) { /* I am Sente */
+	  strcpy(network_player, (char *)row[2]);
+	} else if ( !strcmp(whoami,(char *)row[2]) ) { /* I am Gote */
+	  strcpy(network_player, (char *)row[1]);
+	} else { /* something went wrong */
+	  printf(" Weird.\n");
+	}
+	printf("%s has joined the game.\n", network_player);
+	mysql_free_result( res );
+	return;
+      } else {
+	printf(".");
+	mysql_free_result( res );
+      }
+      fflush(stdout);
+    }
+  }
+  printf("Time is up. Nobody has joined.\n");
+  sprintf(msql_stat, "delete from games where game_id='%s'", game_id);
+  if ( mysql_query( conn, msql_stat )) {
+    printf("Cannot remove game request. You'll have a stale game in the db.\n");
+  }
+  strcpy(network_player,"");
+  strcpy(local_player,"");
+  strcpy(game_id,"");
+} 
+
+#endif /* NETWORKING */

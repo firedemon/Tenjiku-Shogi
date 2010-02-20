@@ -1,6 +1,12 @@
 ---------------------- TODO -------------------------
 
 to fix:
+- put player's names to sente and gote in networked game
+- make moves work (put the full move on the db server)
+- loading games not implemented
+- aborting game won't work (result must be freed first)
+- check whether other player has left the game
+
 - add promoted WBs to the list of FiDs
 - spurious "Illegal move" on eof
 - clear up show_moves (done) and show_influence
@@ -9,6 +15,10 @@ to fix:
 
 
 to add:
+- put whoami and other stuff into configuration file for automatic registration to db
+  find a method to say whose move it is (put some of the global variables into db for 
+  networked game)
+
 - put savegames into their own folder with extension (partly done, no extension yet)
 - add better documentation (good one!)
 
@@ -22,7 +32,7 @@ to add:
 
 consider:
 -graphical GUI
--showing and saving trees for a book
+-showing and saving trees for a book (into mysql database)
 -add comments
 -show igui among possible moves
 

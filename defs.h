@@ -13,7 +13,7 @@
 /* compile options for rule variants */
 /*************************************/
 
-/* #define japanese_FiD 1 */
+#define japanese_FiD 1
 
 #undef japanese_FiD
 
@@ -21,6 +21,9 @@
 /* #define edo_style_FEg 1 */
 
 #define japanese_HT 1
+
+#define MAXWAIT 30
+/* number of seconds to wait for a connection */
 
 /************************************/
 /*  end of user-configurable stuff  */
@@ -277,8 +280,8 @@ extern BOOL fullkanji;
 extern BOOL full_captures;
 /* TRUE if all captures shown on terminal, FALSE for diff list */
 
-extern BOOL networked_game;
-/* TRUE if opponent over the network (not yet working) */
+extern BOOL looking_for_game; /* connected to possibly far-away server */
+extern BOOL accepting_game; /* connected to localhost */
 
 extern int depth_adj[PIECE_TYPES];
 
@@ -293,16 +296,14 @@ extern BOOL move_now;
 extern BOOL have_book;
 extern GDBM_FILE book;
 
-extern BOOL tenjiku_server;
-extern BOOL tenjiku_client;
+extern char local_player[128];
+extern char network_player[128];
 
-extern int read_port;
-extern int write_port;
-
-extern FILE *read_pipe;
-extern FILE *write_pipe;
+extern char game_id[20];
 
 #ifdef EVAL_INFLUENCE
+
+extern char global_last_move[64];
 
 extern influences[2][NUMSQUARES];
 

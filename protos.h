@@ -9,6 +9,12 @@
 #ifdef EZ
 #include "EZ.h"
 #endif
+
+#ifdef NETWORKING
+#include <mysql/mysql.h>
+#endif
+
+
 /* prototypes */
 
 /* board.c */
@@ -49,10 +55,7 @@ BOOL must_promote(int i, int n);
 BOOL higher(int i, int j);
 BOOL suicide(int i);
 int demote(int this);
-void server_init();
-void client_init();
-void send_to_peer(char *string);
-char *get_from_peer();
+BOOL connect_db( char *s);
 
 /* search.c */
 void think(BOOL quiet);
@@ -141,3 +144,19 @@ int analyse_move_string( char *move, char *new_move_buf );
 
 /* kbhit.c (by Alan Cox) */
 int kbhit( void );
+
+void check_db( void );
+BOOL connect_db( char *server_name );
+int get_network_move( void );
+int check_network_move( void );
+void send_network_move( char *s);
+
+#ifdef NETWORKING
+
+void new_db_game( char *whoami);
+void join_game( MYSQL_RES *res, MYSQL_ROW *row, char *whoami, int which);
+void abort_game( MYSQL_ROW *row);
+void load_game_from_db( MYSQL_ROW *row);
+
+
+#endif

@@ -1,5 +1,8 @@
 --------------------- CHANGELOG ----------------------
 Latest changes:
+2010.02.21
+- detecting the other's online status now working on resume
+
 2010.02.20
 - moving over network works
 - detected if opponent locks out

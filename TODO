@@ -1,12 +1,13 @@
 ---------------------- TODO -------------------------
 
 to fix:
-
+- after getting one game the program must be restarted as game_id isn't reset
 - put player's names to sente and gote in networked game
-- detecting the other's online status not working on resume
 - aborting game won't work (result must be freed first)
+- add resign possibility
 - show_moves buggy for fullkanji and rotated board
 
+- allow overwrite on save
 - add promoted WBs to the list of FiDs
 - spurious "Illegal move" on eof
 - clear up show_moves (done) and show_influence

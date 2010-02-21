@@ -653,6 +653,9 @@ int main(int argc,  char **argv)
 	      printf("lpos - load game position files\n");
 	      printf("spos - save position to game position files\n");
 	      printf("tex or TeX - export position to LaTeX file\n");
+	      printf("------------ Network play ----------------\n");
+	      printf("accept - connect to mysql server on localhost\n");
+	      printf("connect - connect to mysql server through internet\n");
 	      printf("bye/quit  - exit the program\n");
 	      fflush(stdout);
 	      continue;
@@ -3483,6 +3486,7 @@ BOOL connect_db( char *server_name ) {
       break;
     case 's':
       printf("skipping game\n");
+      strcpy(game_id,"");
       break;
     case 'c':
       init();

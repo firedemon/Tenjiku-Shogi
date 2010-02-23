@@ -156,6 +156,9 @@ int check_network_move( void );
 void send_network_move( char *s, int idx );
 void network_logout( void );
 
+char diagonal( int i);
+
+void pop_last_network_move( void );
 #ifdef NETWORKING
 
 void new_db_game( char *whoami);

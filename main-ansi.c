@@ -296,6 +296,19 @@ int main(int argc,  char **argv)
 	    case TENJIKU_NOSERVER:
 	      printf("We have some problem with the mysql server.\n");
 	      break;
+	    case TENJIKU_UNDO:
+	      printf("Got undo\n");
+	      --undos;
+	      hist_dat[0] = undo_dat[undos];
+	      redo_dat[redos] = hist_dat[0];
+	      ply = 1;
+	      takeback();
+	      gen();
+	      print_board( stdout );
+	      break;
+	    case TENJIKU_CHAT:
+	      /* not yet implemented */
+	      break;
 	    default:
 	      if ( !makemove(gen_dat[idx].m.b)) {
 		printf("Illegal move.\n");
@@ -762,7 +775,14 @@ int main(int argc,  char **argv)
 	}
 }
 
+char diagonal(int i) {
+  /* diagonal marker */
 
+  if ( (( i % 16) + (i / 16)) % 2 == 0 ) {
+    return('.');
+  }
+  return(' ');
+}
 
 
 unsigned char *ascii_move_str(move_bytes m)
@@ -1179,14 +1199,15 @@ void ascii_print_board( FILE *fd )
       case EMPTY:
 	if (( i == from_square )||( i == to_square )) {
 	  if ( i %RANKS == 15 )
-	    fprintf( fd, "║\e[43m   \e[0m");
+	    fprintf( fd, "║\e[43m %c \e[0m",diagonal(i));
 	  else
-	    fprintf( fd, "│\e[43m   \e[0m");
+	    fprintf( fd, "│\e[43m %c \e[0m",diagonal(i));
 	} else {
-	  if ( i % RANKS == 15 )
-	    fprintf( fd,"║   ");
-	  else
-	    fprintf( fd,"│   ");
+	  if ( i % RANKS == 15 ) {
+	    fprintf( fd,"║ %c ", diagonal(i));
+	  } else {
+	    fprintf( fd,"│ %c ", diagonal(i));
+	  }
 	}
 	break;
       case LIGHT:
@@ -1242,14 +1263,15 @@ void ascii_print_board( FILE *fd )
       case EMPTY:
 	if (( i == from_square )||( i == to_square )) {
 	  if ( i %RANKS == 0 )
-	    fprintf( fd, "║\e[43m   \e[0m");
+	    fprintf( fd, "║\e[43m %c \e[0m", diagonal(i));
 	  else
-	    fprintf( fd, "│\e[43m   \e[0m");
+	    fprintf( fd, "│\e[43m %c \e[0m", diagonal(i));
 	} else {
-	  if ( i % RANKS == 0 )
-	    fprintf( fd,"║   ");
-	  else
-	    fprintf( fd,"│   ");
+	  if ( i % RANKS == 0 ) {
+	    fprintf( fd,"║ %c ", diagonal(i));
+	  } else {
+	    fprintf( fd,"│ %c ", diagonal(i));
+	  }
 	}
 	break;
       case LIGHT:
@@ -3250,6 +3272,7 @@ void undo_move( void ) {
   gen();
   if (networked_game) {
     send_network_move("undo",-1);
+    pop_last_network_move();
   }
 }
 
@@ -3645,9 +3668,18 @@ void send_network_move( char *thismove, int idx ) {
   /* the move is already made so the other side is to move, therefore we'll have to check
    the other way round */
   if ( side ) { /* Gote to move, so I am Sente */
-    sprintf(msql_stat,"update games set last_move_sente = '%s', last_move_gote='-1', moves_so_far= concat( moves_so_far, '\n%s %s'), move_indices=concat(move_indices,',%s') where game_id = '%s'", thismove, unpadded_piece_string[ hist_dat[0].oldpiece ], half_move_str(gen_dat[idx].m.b), thismove, game_id);
-  } else {
-    sprintf(msql_stat,"update games set last_move_sente = '-1', last_move_gote = '%s', moves_so_far= concat( moves_so_far, '\n%s %s'), move_indices=concat(move_indices,',%s') where game_id = '%s'", thismove, unpadded_piece_string[ hist_dat[0].oldpiece ], half_move_str(gen_dat[idx].m.b), thismove, game_id);
+    if ( strcmp(thismove,"undo")) {
+      sprintf(msql_stat,"update games set last_move_sente = '%s', last_move_gote='-1', moves_so_far= concat( moves_so_far, '\n%s %s'), move_indices=concat(move_indices,',%s') where game_id = '%s'", thismove, unpadded_piece_string[ hist_dat[0].oldpiece ], half_move_str(gen_dat[idx].m.b), thismove, game_id);
+    } else {
+      sprintf(msql_stat,"update games set last_move_sente = '%s', last_move_gote='-1' where game_id = '%s'", thismove, game_id);
+    }
+  } else { /* I am Gote */
+    if ( strcmp(thismove,"undo")) {
+      sprintf(msql_stat,"update games set last_move_sente = '-1', last_move_gote = '%s', moves_so_far= concat( moves_so_far, '\n%s %s'), move_indices=concat(move_indices,',%s') where game_id = '%s'", thismove, unpadded_piece_string[ hist_dat[0].oldpiece ], half_move_str(gen_dat[idx].m.b), thismove, game_id);
+    } else {
+      sprintf(msql_stat,"update games set last_move_sente = '-1', last_move_gote = '%s' where game_id = '%s'", thismove, game_id);
+      /* trim(trailing ',' from trim(trailing substring_index('a,b,c,d',',',-1) from 'a,b,c,d')) */
+    }
   }
   /* printf("%s\n", msql_stat); */
   if ( mysql_query( conn, msql_stat )) 
@@ -3674,7 +3706,7 @@ int get_network_move( void ){
     if (  move_idx != TENJIKU_NOMOVE ) {
 	printf("\a");
 	return(move_idx);
-    }
+    } 
     sleep( 1);
     i++;
   }
@@ -3683,7 +3715,8 @@ int get_network_move( void ){
   
 int check_network_move( void ) {
   /*
-    returns move index (from gen), TENJIKU_NOMOVE for no move, TENJIKU_NOSERVER for network error, TENJIKU_NOOPPONENT
+    returns move index (from gen), TENJIKU_NOMOVE for no move, 
+    TENJIKU_NOSERVER for network error, TENJIKU_NOOPPONENT
     if opponent has gone away */
  
   char msql_stat[1024], msql_stat2[1024];
@@ -3734,19 +3767,25 @@ int check_network_move( void ) {
     if ( strcmp((char*)row[1],"yes") ) { /* 'no' in xxx_online */
       return( TENJIKU_NOOPPONENT );
     }
-      if ( strcmp((char*)row[0],"") &&
-	   strcmp((char*)row[0],global_last_move)) { /* a move or command has arrived */
-	strcpy(last_move,(char*)row[0]);
-	move_idx = strtol(last_move, &p, 10 );
-	/* printf("Got a move: %d as %s\n", move_idx, last_move); */
 
-	mysql_free_result( res );
-	if ( mysql_query( conn, msql_stat2 )) {
-	  printf("check_network_move(2): Hmmm, something's wrong with the connection: %s\n", mysql_error( conn ));
-	  return(TENJIKU_NOSERVER);
-	}
-	return( move_idx );
+    if ( !strcmp((char*)row[0],"undo") ) { /* 'undo' in last_move */
+      return( TENJIKU_UNDO );
+    }
+    /*    if ( !strcmp(  chat should go here */
+    
+    if ( strcmp((char*)row[0],"") &&
+	 strcmp((char*)row[0],global_last_move)) { /* a move or command has arrived */
+      strcpy(last_move,(char*)row[0]);
+      move_idx = strtol(last_move, &p, 10 );
+      /* printf("Got a move: %d as %s\n", move_idx, last_move); */
+      
+      mysql_free_result( res );
+      if ( mysql_query( conn, msql_stat2 )) {
+	printf("check_network_move(2): Hmmm, something's wrong with the connection: %s\n", mysql_error( conn ));
+	return(TENJIKU_NOSERVER);
       }
+      return( move_idx );
+    }
   }
 }
 
@@ -3909,6 +3948,69 @@ void join_game( MYSQL_RES *res, MYSQL_ROW row, char *whoami, int which ) {
   printf("Game joined.\n");
   print_board( stdout );
 }
+
+void pop_last_network_move( void ) {
+  /* called after undo over the net */
+  /* the undo command didn't get written on the stacks, but the 
+     last move must be get out */
+  char msql_stat[20000];
+  MYSQL_RES *res;
+  MYSQL_ROW row;
+  char moves[2048], move_indices[2048];
+  char *move_ptr, *idx_ptr;
+
+  if ( conn ) {
+    mysql_close( conn );
+    conn = NULL;
+  }
+  conn = mysql_init( NULL );
+
+  if (conn == NULL) {
+    printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
+    return;
+  }
+  if (mysql_real_connect(conn, real_server, "tenjiku", "tenjiku", "tenjiku", 0, NULL, 0) == NULL) {
+    printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
+  }
+
+  sprintf( msql_stat, "select moves_so_far, move_indices from games where game_id='%s'", game_id );
+  fprintf(stderr, "%s\n", msql_stat );
+  if ( mysql_query( conn, msql_stat  )) {
+    printf("Couldn't get moves from the stack. The saved game on the server will be faulty. Sorry.\n");
+    return;
+  }
+  res = mysql_use_result( conn );
+  if ( !res ) return;
+  row = mysql_fetch_row( res );
+  if ( !row ) return;
+
+  strcpy(moves, (char *)row[0]);
+  strcpy(move_indices, (char *)row[1]);
+
+  mysql_free_result( res );
+
+  move_ptr = &moves[strlen(moves)-2];
+  while ( *move_ptr != '\n' ) {
+    move_ptr--;
+  }
+  *move_ptr = '\0';
+
+  idx_ptr = &move_indices[strlen(move_indices)-2];
+  while ( *idx_ptr != ',' ) {
+    idx_ptr--;
+  }
+  *idx_ptr = '\0';
+
+  sprintf( msql_stat, "update games set moves_so_far='%s', move_indices='%s' where game_id='%s'",
+	  moves, move_indices, game_id );
+  if ( mysql_query( conn, msql_stat )) {
+    printf("Couldn't add new game to database. Sorry.\n");
+    return;
+  }
+
+  
+
+} /* pop move */
 
 void new_db_game( char *whoami ) {
 

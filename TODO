@@ -1,12 +1,14 @@
 ---------------------- TODO -------------------------
 
 to fix:
-- after getting one game the program must be restarted as game_id isn't reset
+
 - put player's names to sente and gote in networked game
 - aborting game won't work (result must be freed first)
 - add resign possibility
-- show_moves buggy for fullkanji and rotated board
+- show_moves buggy for rotated board throughout
+  fullkanji cramped board, nothing for kanji and rotated board
 
+- swap sides (can be done by unlogging and logging on with reversed names)
 - allow overwrite on save
 - add promoted WBs to the list of FiDs
 - spurious "Illegal move" on eof

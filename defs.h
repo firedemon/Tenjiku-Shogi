@@ -37,6 +37,8 @@
 #define TENJIKU_NOMOVE          -1
 #define TENJIKU_NOSERVER        -2
 #define TENJIKU_NOOPPONENT      -3
+#define TENJIKU_UNDO            -4
+#define TENJIKU_CHAT            -5
 
 
 #define BOOL			int

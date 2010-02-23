@@ -1,5 +1,9 @@
 --------------------- CHANGELOG ----------------------
 Latest changes:
+2010.02.22
+- undo works for network games
+- after getting one game the program needn't be restarted as game_id is reset now
+
 2010.02.21
 - detecting the other's online status now working on resume
 

@@ -252,8 +252,13 @@ extern int piece_value[PIECE_TYPES+1];
 
 extern BOOL search_quiesce;
 
+extern BOOL com_mode;
+
 extern BOOL rotated;
 /* TRUE if board is rotated */
+
+extern BOOL diagonals;
+/* if TRUE diagonals are easier to see */
 
 extern BOOL loaded_position;
 /* TRUE if position is loaded from a file, not played from the 

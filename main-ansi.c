@@ -36,6 +36,11 @@ char game_id[20] = "";
 char real_server[128];
 #endif
 
+BOOL com_mode = FALSE;
+/* silent mode for GUI communication */
+BOOL noinit = FALSE;
+/* true if init file is not to be read */
+
 unsigned char *side_name[2] = { "Sente", "Gote" };
 int computer_side, network_side;
 char TeXoutputpath[1024] = "exports";
@@ -43,6 +48,7 @@ char savegamepath[1024] = "savegames";
 char positionpath[1024] = "positions";
 char positionfile[1024];
 char global_last_move[64];
+char chatline[1024];
 
 FILE *read_pipe = NULL;
 FILE *write_pipe = NULL;
@@ -55,6 +61,7 @@ BOOL accepting_game = FALSE;
 #endif
 
 BOOL rotated = FALSE; /* board is not rotated */
+BOOL diagonals = TRUE;
 BOOL annotate = TRUE;
 BOOL search_quiesce = TRUE;
 BOOL jgs_tsa = FALSE; /* tsa rule by default off */
@@ -123,7 +130,7 @@ long get_ms()
 
 int main(int argc,  char **argv)
 {
-	char *s = "                                                                                              ";
+	char *s = "                                                                                                                                                                                                                                                                                        ";
 	int from, over, to, i, idx;
 	int from_file, to_file;
 	int over_file;
@@ -133,40 +140,43 @@ int main(int argc,  char **argv)
 	char last_move[15], before_last_move[1024], last_move_buf[128]; /* to prevent overflowing from nonsense */
 	BOOL found, promote, found_in_book;
 
-
-	printf("\n");
-	printf("Tenjiku Shogi %s by E.Werner\n", tenjiku_version);
-	printf("   derived from\n");
-	printf("Tom Kerrigan's Simple Chess Program (TSCP)\n");
-	printf("version 1.52, 6/29/00\n");
-	printf("\n");
-	printf("\"help\" or \"?\" displays a list of commands.\n");
-	printf("Compiled-in options:\n");
-#ifdef japanese_FiD
-	printf("FiD slides horizontally, not vertically\n");
-#else
-	printf("FiD slides vertically, not horizontally\n");
-#endif
-#ifdef edo_style_Feg
-	printf("FEg jumps to second square orthogonally\n");
-#else
-	printf("FEd has igui and double capture along slide directions\n");
-#endif
-#ifdef japanese_HT
-	printf("HT jumps into all directions, triple-steps orthogonally and slides vertically\n");
-#else
-	printf("HT jumps and triple-steps orthogonally\n");
-#endif
-
-
 	init();
 	book = book_init();
 	gen();
 	computer_side = EMPTY;
 	network_side = EMPTY;
 	max_time = 1000000;
-	read_init_file();
 	process_arguments(argc, argv);
+	if ( ! noinit )
+	  read_init_file();
+
+	if ( ! com_mode ) {
+	  printf("\n");
+	  printf("Tenjiku Shogi %s by E.Werner\n", tenjiku_version);
+	  printf("   derived from\n");
+	  printf("Tom Kerrigan's Simple Chess Program (TSCP)\n");
+	  printf("version 1.52, 6/29/00\n");
+	  printf("\n");
+	  printf("\"help\" or \"?\" displays a list of commands.\n");
+	  printf("Compiled-in options:\n");
+#ifdef japanese_FiD
+	  printf("FiD slides horizontally, not vertically\n");
+#else
+	  printf("FiD slides vertically, not horizontally\n");
+#endif
+#ifdef edo_style_Feg
+	  printf("FEg jumps to second square orthogonally\n");
+#else
+	  printf("FEd has igui and double capture along slide directions\n");
+#endif
+#ifdef japanese_HT
+	  printf("HT jumps into all directions, triple-steps orthogonally and slides vertically\n");
+#else
+	  printf("HT jumps and triple-steps orthogonally\n");
+#endif
+	  print_board( stdout );
+	}
+
 #ifdef CENTIPLY
 	max_depth = 400;
 #else
@@ -284,8 +294,12 @@ int main(int argc,  char **argv)
 	    idx = get_network_move(); /* look for incoming move */
 	    switch ( idx ) {
 	    case TENJIKU_NOOPPONENT:
-	      printf("Our opponent seems to have disappeared.\n");
-	      printf("Logging out from the server.\n");
+	      if ( com_mode ) {
+		printf("error: no opponent\n");
+	      } else {
+		printf("Our opponent seems to have disappeared.\n");
+		printf("Logging out from the server.\n");
+	      }
 	      side ^= 1;
 	      xside ^= 1;
 	      network_logout();
@@ -294,20 +308,23 @@ int main(int argc,  char **argv)
 	      xside ^= 1;
 	      break;
 	    case TENJIKU_NOSERVER:
-	      printf("We have some problem with the mysql server.\n");
+	      if ( com_mode ) {
+		printf("error:mysql\n");
+	      } else {
+		printf("We have some problem with the mysql server.\n");
+	      }
 	      break;
 	    case TENJIKU_UNDO:
-	      printf("Got undo\n");
+	      /* printf("Got undo\n"); */
 	      --undos;
 	      hist_dat[0] = undo_dat[undos];
 	      redo_dat[redos] = hist_dat[0];
 	      ply = 1;
 	      takeback();
 	      gen();
-	      print_board( stdout );
 	      break;
 	    case TENJIKU_CHAT:
-	      /* not yet implemented */
+	      print_chatline( );
 	      break;
 	    default:
 	      if ( !makemove(gen_dat[idx].m.b)) {
@@ -327,10 +344,10 @@ int main(int argc,  char **argv)
 	    if (!strcmp(s, "quiesce")) {
 	      if ( search_quiesce ) {
 		search_quiesce = FALSE;
-		printf("No quiesce search\n");
+		no_com_printf("No quiesce search\n");
 	      } else {
 		search_quiesce = TRUE;
-		printf("quiesce search on\n");
+		no_com_printf("quiesce search on\n");
 	      }
 	      continue;
 	    }
@@ -340,6 +357,12 @@ int main(int argc,  char **argv)
 	    }
 	    if (!strcmp(s, "save")|| !strcmp(s,"s")) {
 	      save_game("");
+	      continue;
+	    }
+	    if (!strcmp(s, "dia")|| !strcmp(s,"diag")) {
+	      if (diagonals ) diagonals = FALSE;
+	      else diagonals = TRUE;
+	      print_board(stdout );
 	      continue;
 	    }
 	    if (!strcmp(s, "savepos")|| !strcmp(s,"spos")) {
@@ -415,7 +438,8 @@ int main(int argc,  char **argv)
 	      continue;
 	    }
 	    if (!strcmp(s, "ew")) {
-	      printf("Jumping Generals jump-capture anything (Eduard Werner).\n");
+	      no_com_printf("Jumping Generals jump-capture anything (Eduard Werner).\n");
+	      com_printf("ew");
 	      fflush(stdout);
 	      have_book = FALSE;
 	      jgs_tsa = FALSE;
@@ -424,7 +448,8 @@ int main(int argc,  char **argv)
 	      continue;
 	    }
 	    if (!strcmp(s, "classic")) {
-	      printf("Lion Hawk as two-step area mover (TSA).\n");
+	      no_com_printf("Lion Hawk as two-step area mover (TSA).\n");
+	      com_printf("classic");
 	      fflush(stdout);
 	      modern_lion_hawk = FALSE;
 	      book = book_init();
@@ -433,7 +458,8 @@ int main(int argc,  char **argv)
 	      continue;
 	    }
 	    if (!strcmp(s, "modern")) {
-	      printf("Lion Hawk with Lion Power (Colin Paul Adams).\n");
+	      no_com_printf("Lion Hawk with Lion Power (Colin Paul Adams).\n");
+	      com_printf("modern");
 	      fflush(stdout);
 	      modern_lion_hawk = TRUE;
 	      book = book_init();
@@ -442,7 +468,8 @@ int main(int argc,  char **argv)
 	      continue;
 	    }
 	    if (!strcmp(s, "hodges")) {
-	      printf("Fire Demon suicide also burns enemy pieces (George Hodges).\n");
+	      no_com_printf("Fire Demon suicide also burns enemy pieces (George Hodges).\n");
+	      com_printf("hodges");
 	      hodges_FiD = TRUE;
 	      book = book_init();
 	      init();
@@ -451,18 +478,18 @@ int main(int argc,  char **argv)
 	    }
 	  
 	    if (!strcmp(s, "hypo")) {
-	      printf("m(oves) shows hypothetical moves, too\n");
+	      no_com_printf("m(oves) shows hypothetical moves, too\n");
 	      show_hypothetical_moves = TRUE;
 	      continue;
 	    }
 	    if (!strcmp(s, "nohypo")) {
-	      printf("m(oves) doesn't show hypothetical moves\n");
+	      no_com_printf("m(oves) doesn't show hypothetical moves\n");
 	      show_hypothetical_moves = FALSE;
 	      continue;
 	    }		
 	  
 	    if (!strcmp(s, "burn")) {
-	      printf("Fire Demon also burns friendly pieces (Eduard Werner).\n");
+	      no_com_printf("Fire Demon also burns friendly pieces (Eduard Werner).\n");
 	      hodges_FiD = TRUE;
 	      book = book_init();
 	      init();
@@ -470,7 +497,7 @@ int main(int argc,  char **argv)
 	      continue;
 	    }
 	    if (!strcmp(s, "noburn")) {
-	      printf("Fire Demon doesn't burn friendly pieces (Eduard Werner).\n");
+	      no_com_printf("Fire Demon doesn't burn friendly pieces (Eduard Werner).\n");
 	      hodges_FiD = TRUE;
 	      book = book_init();
 	      init();
@@ -478,7 +505,7 @@ int main(int argc,  char **argv)
 	      continue;
 	    }
 	    if (!strcmp(s, "tame")) {
-	      printf("Fire Demon only burns if it doesn't capture.\n");
+	      no_com_printf("Fire Demon only burns if it doesn't capture.\n");
 	      tame_FiD = TRUE;
 	      book = book_init();
 	      init();
@@ -486,7 +513,7 @@ int main(int argc,  char **argv)
 	      continue;
 	    }
 	    if (!strcmp(s, "verytame")) {
-	      printf("Fire Demon only burns, but cannot capture.\n");
+	      no_com_printf("Fire Demon only burns, but cannot capture.\n");
 	      verytame_FiD = TRUE;
 	      book = book_init();
 	      init();
@@ -494,7 +521,7 @@ int main(int argc,  char **argv)
 	      continue;
 	    }
 	    if (!strcmp(s, "notame")) {
-	      printf("Fire Demon burns also on capture.\n");
+	      no_com_printf("Fire Demon burns also on capture.\n");
 	      tame_FiD = FALSE;
 	      verytame_FiD = FALSE;
 	      book = book_init();
@@ -503,7 +530,7 @@ int main(int argc,  char **argv)
 	      continue;
 	    }
 	    if (!strcmp(s, "hodges")) {
-	      printf("Fire Demon suicide also burns enemy pieces (George Hodges).\n");
+	      no_com_printf("Fire Demon suicide also burns enemy pieces (George Hodges).\n");
 	      hodges_FiD = TRUE;
 	      book = book_init();
 	      init();
@@ -511,7 +538,7 @@ int main(int argc,  char **argv)
 	      continue;
 	    }
 	    if (!strcmp(s, "fid")) {
-	      printf("Fire Demon suicide does not burn anything (TSA).\n");
+	      no_com_printf("Fire Demon suicide does not burn anything (TSA).\n");
 	      fflush(stdout);
 	      hodges_FiD = FALSE;
 	      tame_FiD = FALSE;
@@ -598,7 +625,7 @@ int main(int argc,  char **argv)
 	      continue;
 	    }
 	    if (!strcmp(s, "bye") || !strcmp(s, "quit")) {
-	      printf("Share and enjoy!\n");
+	      no_com_printf("Share and enjoy!\n");
 	      network_logout();
 	      exit(0);
 	    }
@@ -659,6 +686,7 @@ int main(int argc,  char **argv)
 	      printf("ascii - display ascii board\n");
 	      printf("kanji - display kanji board with one kanji per piece\n");
 	      printf("fullkanji - display kanji board with two kanjis per piece\n");
+	      printf("dia/diag - toggles display of diagonals\n");
 	      printf("------------ File I/O ----------------\n");
 	      printf("l(oad) - load a game file\n");
 	      /* printf("replay - load a game file and replay game\n"); */
@@ -676,7 +704,11 @@ int main(int argc,  char **argv)
 
 	    /* maybe the user entered a move? */
 	    promote = FALSE;
-
+	    if ( s[0]==':') { /*careful, wrong sides now */
+	      no_com_printf("Chatting with opponent ...\n");
+	      send_network_move(s, TENJIKU_CHAT );
+	      continue;
+	    } 
 	    if ( 9 == sscanf(s,"%d%c%c%d%c%c%d%c%c",&from_file, &from_rank, &igui,
 			     &over_file, &over_rank, &igui2, &to_file, &to_rank, &prom) ) {
 	      if ( prom == '+' ) promote = TRUE;
@@ -778,7 +810,7 @@ int main(int argc,  char **argv)
 char diagonal(int i) {
   /* diagonal marker */
 
-  if ( (( i % 16) + (i / 16)) % 2 == 0 ) {
+  if ( diagonals && ((( i % 16) + (i / 16)) % 2 == 0 )) {
     return('.');
   }
   return(' ');
@@ -1068,22 +1100,26 @@ unsigned char *half_move_str(move_bytes m)
 /* print_board prints the board */
 
 void print_board( FILE *fd ) {
-  if ( fullkanji )
-    full_kanji_print_board( fd );
-  else if ( kanji ) {
-    kanji_print_board( fd );
+  if (com_mode) {
+    ; /* print last move here */
   } else {
-    ascii_print_board( fd );
-  }
-  if ( full_captures ) {
-    print_full_captures();
-  } else {
-    print_diff_captures();
-  }
-  if ( lost( side )) {
-    fprintf( stdout, "You have lost the game!\n");
-  } else if ( in_check( side )) {
-    fprintf( stdout, "You're in CHECK!\n");
+    if ( fullkanji )
+      full_kanji_print_board( fd );
+    else if ( kanji ) {
+      kanji_print_board( fd );
+    } else {
+      ascii_print_board( fd );
+    }
+    if ( full_captures ) {
+      print_full_captures();
+    } else {
+      print_diff_captures();
+    }
+    if ( lost( side )) {
+      fprintf( stdout, "You have lost the game!\n");
+    } else if ( in_check( side )) {
+      fprintf( stdout, "You're in CHECK!\n");
+    }
   }
 }
 
@@ -1376,14 +1412,14 @@ void kanji_print_board( FILE *fd )
       case EMPTY:
 	if (( i == from_square )||( i == to_square )) {
 	  if ( i %RANKS == 15 )
-	    fprintf( fd, "║\e[43m   \e[0m");
+	    fprintf( fd, "║\e[43m %c \e[0m",diagonal(i));
 	  else
-	    fprintf( fd, "│\e[43m   \e[0m");
+	    fprintf( fd, "│\e[43m %c \e[0m",diagonal(i));
 	} else {
 	  if ( i % RANKS == 15 )
-	    fprintf( fd,"║   ");
+	    fprintf( fd,"║ %c ",diagonal(i));
 	  else
-	    fprintf( fd,"│   ");
+	    fprintf( fd,"│ %c ",diagonal(i));
 	}
 	break;
       case LIGHT:
@@ -1439,14 +1475,14 @@ void kanji_print_board( FILE *fd )
       case EMPTY:
 	if (( i == from_square )||( i == to_square )) {
 	  if ( i %RANKS == 0 )
-	    fprintf( fd, "║\e[43m   \e[0m");
+	    fprintf( fd, "║\e[43m %c \e[0m",diagonal(i));
 	  else
-	    fprintf( fd, "│\e[43m   \e[0m");
+	    fprintf( fd, "│\e[43m %c \e[0m", diagonal(i));
 	} else {
 	  if ( i % RANKS == 0 )
-	    fprintf( fd,"║   ");
+	    fprintf( fd,"║ %c ",diagonal(i));
 	  else
-	    fprintf( fd,"│   ");
+	    fprintf( fd,"│ %c ",diagonal(i));
 	}
 	break;
       case LIGHT:
@@ -1546,14 +1582,14 @@ void full_kanji_print_board( FILE *fd )
       case EMPTY:
 	if (( i == from_square )||( i == to_square )) {
 	  if ( i %RANKS == 15 )
-	    fprintf( fd, "║\e[43m   \e[0m");
+	    fprintf( fd, "║\e[43m %c \e[0m",diagonal(i));
 	  else
-	    fprintf( fd, "│\e[43m   \e[0m");
+	    fprintf( fd, "│\e[43m %c \e[0m",diagonal(i));
 	} else {
 	  if ( i % RANKS == 15 )
-	    fprintf( fd,"║   ");
+	    fprintf( fd,"║ %c ",diagonal(i));
 	else
-	  fprintf( fd,"│   ");
+	  fprintf( fd,"│ %c ", diagonal(i));
 	}
 	break;
       case LIGHT:
@@ -1664,14 +1700,14 @@ void full_kanji_print_board( FILE *fd )
       case EMPTY:
 	if (( i == from_square )||( i == to_square )) {
 	  if ( i %RANKS == 0 )
-	    fprintf( fd, "║\e[43m   \e[0m");
+	    fprintf( fd, "║\e[43m %c \e[0m", diagonal(i));
 	  else
-	    fprintf( fd, "│\e[43m   \e[0m");
+	    fprintf( fd, "│\e[43m %c \e[0m", diagonal(i));
 	} else {
 	  if ( i % RANKS == 0 )
-	    fprintf( fd,"║   ");
+	    fprintf( fd,"║ %c ", diagonal(i));
 	else
-	  fprintf( fd,"│   ");
+	  fprintf( fd,"│ %c ",diagonal(i));
 	}
 	break;
       case LIGHT:
@@ -2014,8 +2050,10 @@ void really_load_game( char *fn ) {
 	
     if (!found || !makemove(gen_dat[i].m.b)) {
       printf("Illegal move on line %d.\n", line);
-      print_board(stdout);
-      fflush(stdout);
+      if ( com_mode ) {
+	print_board(stdout);
+	fflush(stdout);
+      }
       return;
     } else {
       /* save the "backup" data because it will be overwritten */
@@ -2026,11 +2064,14 @@ void really_load_game( char *fn ) {
     }
 
   } while (!feof(fh));
-  printf("%d plies\n", undos );
+
 
   fclose(fh);
-  print_board(stdout);
-  fflush(stdout);
+  if ( !com_mode ) {
+    printf("%d plies\n", undos );
+    print_board(stdout);
+    fflush(stdout);
+  }
 
 } /* really_load_game */
 
@@ -2206,7 +2247,7 @@ void save_game( char *filename ) {
     fprintf(fh,"setup %s\n", positionfile );
   }
   for (i=0;i < undos; i++) {
-    fprintf(fh,"%d. %s %s\n",i+1,piece_string[undo_dat[i].oldpiece], half_move_str(undo_dat[i].m.b));
+    fprintf(fh,"%d. %s %s\n",i+1,unpadded_piece_string[undo_dat[i].oldpiece], half_move_str(undo_dat[i].m.b));
   }
   fclose(fh);
 }
@@ -2461,7 +2502,13 @@ void show_moves( void ) {
   xside = orig_xside;
   gen();
 
-
+  if ( com_mode ) {
+    for ( i = 0; i < NUMSQUARES; i++ ) {
+      printf("%d ",var_board[i]);
+    }
+    printf("\n");
+    return;
+  }
   printf("\n All moves.\n");
   /* now print the variant board */
   if ( rotated ) {
@@ -2473,9 +2520,9 @@ void show_moves( void ) {
 	  switch (color[i]) {
 	  case EMPTY:
 	    if ( i %RANKS == 15 )
-	      printf( "║\e[43m   \e[0m");
+	      printf( "║\e[43m %c \e[0m",diagonal(i));
 	    else
-	      printf( "│\e[43m   \e[0m");
+	      printf( "│\e[43m %c \e[0m",diagonal(i));
 	    break;
 	  case LIGHT:
 	    if ( i %RANKS == 15 )
@@ -2565,9 +2612,9 @@ void show_moves( void ) {
 	  switch (color[i]) {
 	  case EMPTY:
 	  if ( i % RANKS == 0 )
-	    printf( "║%s   \e[0m", color_string[var_board[i]]);
+	    printf( "║%s %c \e[0m", color_string[var_board[i]], diagonal(i));
 	  else
-	    printf( "│%s   \e[0m", color_string[var_board[i]]);
+	    printf( "│%s %c \e[0m", color_string[var_board[i]], diagonal(i));
 	  break;
 	  case LIGHT:
 	    if ( i %RANKS == 0 )
@@ -2613,9 +2660,9 @@ void show_moves( void ) {
 	  switch (color[i]) {
 	  case EMPTY:
 	    if ( i % RANKS == 0 )
-	      printf( "║   ");
+	      printf( "║ %c ",diagonal(i));
 	    else
-	      printf( "│   ");
+	      printf( "│ %c ",diagonal(i));
 	    break;
 	  case LIGHT:
 	    if ( i %RANKS == 0 )
@@ -2668,9 +2715,9 @@ void show_moves( void ) {
 	  switch (color[i]) {
 	  case EMPTY:
 	    if ( i % RANKS == 0 )
-	      printf( "║%s   \e[0m", color_string[var_board[i]]);
+	      printf( "║%s %c \e[0m", color_string[var_board[i]], diagonal(i));
 	    else
-	      printf( "│%s   \e[0m", color_string[var_board[i]]);
+	      printf( "│%s %c \e[0m", color_string[var_board[i]],diagonal(i));
 	    break;
 	  case LIGHT:
 	    if ( i % RANKS == 0 )
@@ -2693,9 +2740,9 @@ void show_moves( void ) {
 	  switch (color[i]) {
 	  case EMPTY:
 	    if ( i % RANKS == 0 )
-	      printf("║   ");
+	      printf("║ %c ", diagonal(i));
 	    else
-	      printf("│   ");
+	      printf("│ %c ", diagonal(i));
 	    break;
 	  case LIGHT:
 	    if ( i % RANKS == 0 )
@@ -2723,9 +2770,9 @@ void show_moves( void ) {
 	  switch (color[i]) {
 	  case EMPTY:
 	    if ( i % RANKS == 0 )
-	      printf("║%s   \e[0m", color_string[var_board[i]]); 
+	      printf("║%s %c \e[0m", color_string[var_board[i]], diagonal(i)); 
 	    else
-	      printf("│%s   \e[0m", color_string[var_board[i]]); 
+	      printf("│%s %c \e[0m", color_string[var_board[i]], diagonal(i)); 
 	    break;
 	  case LIGHT:
 	    if ( i % RANKS == 0 )
@@ -2744,9 +2791,9 @@ void show_moves( void ) {
 	  switch (color[i]) {
 	  case EMPTY:
 	    if ( i % RANKS == 0 )
-	      printf("║   ");
+	      printf("║ %c ", diagonal(i));
 	    else
-	      printf("│   ");
+	      printf("│ %c ", diagonal(i));
 	    break;
 	  case LIGHT:
 	    if ( i % RANKS == 0 )
@@ -2975,6 +3022,14 @@ void show_influence( void ) {
     level++;
     printf("\n");
   } while ( found_influence );
+
+  if ( com_mode ) {
+    for ( i = 0; i < NUMSQUARES; i++ ) {
+      printf("%d ",var_board[i]);
+    }
+    printf("\n");
+    return;
+  }
 
   printf("\n All moves.\n");
 
@@ -3294,13 +3349,31 @@ void redo_move( void ) {
 
 void process_arguments(int argc, char **argv) {
   char path[1024];
+  int i;
   /* fprintf(stdout,"%d arguments", argc); */
-  if (argc == 2 ) {
-    /* fprintf(stderr,"%s\n",argv[0]);
-    fprintf(stderr,"%s\n",argv[1]);
-    fprintf(stderr,"%s\n",argv[2]); */
-    sprintf(path,"%s/%s",savegamepath,argv[1]);
-    really_load_game(path);
+  for ( i = 1; i < argc; i++ ) {
+    if ( !strcmp( argv[i], "--silent" )) {
+      com_mode = TRUE;
+    } else if ( !strcmp( argv[i], "--noinit" )) {
+      noinit = TRUE;
+    } else if ( !strcmp( argv[i], "--help" )) {
+      printf("Possible startup options:\n");
+      printf("--help\t show this message and exit\n");
+      printf("--load filename\t load file on startup\n");
+      printf("--noinit \tdo not load 'tenjiku.init' on startup\n");
+      printf("--silent\t enter silent mode (for use with GUI)\n");
+      exit(0);
+    } else if ( !strcmp( argv[i], "--load" )) {
+      i++;
+      if ( i < argc ) {
+	sprintf(path,"%s",argv[i]);
+	really_load_game(path);    
+	i++;
+      } else {
+	printf("Try 'tenjiku --help' for startup options.\n");
+	exit(0);
+      }
+    }
   }
   return;
 }
@@ -3668,17 +3741,20 @@ void send_network_move( char *thismove, int idx ) {
   /* the move is already made so the other side is to move, therefore we'll have to check
    the other way round */
   if ( side ) { /* Gote to move, so I am Sente */
-    if ( strcmp(thismove,"undo")) {
+    if ( idx == TENJIKU_CHAT ) { /* chatting with opponent, careful, sides are swapped */
+      sprintf(msql_stat,"update games set last_move_sente = '-1', last_move_gote='%s' where game_id = '%s'", thismove, game_id);
+    } else if ( strcmp(thismove,"undo")) { /* not an undo */
       sprintf(msql_stat,"update games set last_move_sente = '%s', last_move_gote='-1', moves_so_far= concat( moves_so_far, '\n%s %s'), move_indices=concat(move_indices,',%s') where game_id = '%s'", thismove, unpadded_piece_string[ hist_dat[0].oldpiece ], half_move_str(gen_dat[idx].m.b), thismove, game_id);
-    } else {
+    } else { /* undo */
       sprintf(msql_stat,"update games set last_move_sente = '%s', last_move_gote='-1' where game_id = '%s'", thismove, game_id);
     }
   } else { /* I am Gote */
-    if ( strcmp(thismove,"undo")) {
+    if ( idx == TENJIKU_CHAT ) { /* chatting with opponent */
+      sprintf(msql_stat,"update games set last_move_sente = '%s', last_move_gote='-1' where game_id = '%s'", thismove, game_id);
+    } else if ( strcmp(thismove,"undo")) { /* not an undo */
       sprintf(msql_stat,"update games set last_move_sente = '-1', last_move_gote = '%s', moves_so_far= concat( moves_so_far, '\n%s %s'), move_indices=concat(move_indices,',%s') where game_id = '%s'", thismove, unpadded_piece_string[ hist_dat[0].oldpiece ], half_move_str(gen_dat[idx].m.b), thismove, game_id);
-    } else {
+    } else { /* undo */
       sprintf(msql_stat,"update games set last_move_sente = '-1', last_move_gote = '%s' where game_id = '%s'", thismove, game_id);
-      /* trim(trailing ',' from trim(trailing substring_index('a,b,c,d',',',-1) from 'a,b,c,d')) */
     }
   }
   /* printf("%s\n", msql_stat); */
@@ -3724,7 +3800,7 @@ int check_network_move( void ) {
   MYSQL_RES *res;
   MYSQL_ROW row;
   int move_idx;
-  char *p;
+  char *p, *r;
 
   mysql_close( conn );
 
@@ -3764,12 +3840,29 @@ int check_network_move( void ) {
       return(TENJIKU_NOSERVER);
     }
 
+    r = (char *)row[0];
+    /* printf("First letter is %c\n",*r); */
     if ( strcmp((char*)row[1],"yes") ) { /* 'no' in xxx_online */
       return( TENJIKU_NOOPPONENT );
     }
 
     if ( !strcmp((char*)row[0],"undo") ) { /* 'undo' in last_move */
       return( TENJIKU_UNDO );
+    }
+
+    if ( *r == ':' ) { /* chatline found, sides are swapped, so we'll redo msql_stat2 */
+      strcpy(chatline,(char*)row[0]);
+      if ( xside ) {
+	sprintf(msql_stat2, "update games set last_move_sente='-1' where game_id = '%s'", game_id);
+      } else {
+	sprintf(msql_stat2, "update games set last_move_gote='-1' where game_id = '%s'", game_id);
+      }
+      mysql_free_result( res );
+      if ( mysql_query( conn, msql_stat2 )) {
+	printf("check_network_move(2): Hmmm, something's wrong with the connection: %s\n", mysql_error( conn ));
+	return(TENJIKU_NOSERVER);
+      }
+      return( TENJIKU_CHAT );
     }
     /*    if ( !strcmp(  chat should go here */
     
@@ -3794,6 +3887,9 @@ void network_logout( void ) {
      right before exit */
 #ifdef NETWORKING
   char msql_stat[1024];
+
+  if ( ! networked_game ) 
+    return;
 
   if ( conn ) { /* are we connected */
     printf("Closing connection to database ...\n");
@@ -4012,6 +4108,11 @@ void pop_last_network_move( void ) {
 
 } /* pop move */
 
+void print_chatline() {
+  /* printf("Hey, somebody is chatting with me!\n"); */
+  printf("\e[43m%s\e[0m\n", chatline);
+}
+
 void new_db_game( char *whoami ) {
 
   char ask;
@@ -4106,3 +4207,14 @@ void new_db_game( char *whoami ) {
 } 
 
 #endif /* NETWORKING */
+
+void no_com_printf( char *s ) {
+  if ( com_mode ) return;
+  printf("%s",s);
+}
+
+void com_printf(char *s) {
+  if (com_mode )
+    printf("%s",s);
+  return;
+}

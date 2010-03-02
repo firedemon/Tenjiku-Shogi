@@ -1,5 +1,15 @@
 --------------------- CHANGELOG ----------------------
 Latest changes:
+2010.02.28
+- changed startup options to --noinit --load <filename> --silent
+- --silent enters com_mode for GUI program (with expect-like connection)
+2010.02.26
+- fixed two typos in upper_kanji_string
+- changed piece_string to unpadded_piece_string in save_game
+  in order to get rid of the red pieces in the file
+2010.02.23
+- diagonals shown for kanji and fullkanji mode
+- very rudimental chat (send a short phrase with ':' when it's your move
 2010.02.22
 - undo works for network games
 - after getting one game the program needn't be restarted as game_id is reset now
